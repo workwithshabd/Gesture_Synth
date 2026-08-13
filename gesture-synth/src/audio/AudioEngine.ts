@@ -5,98 +5,325 @@ import { Rhodes } from "./Rhodes";
 
 import type { Instrument } from "./Instrument";
 
-export type InstrumentType = "ORGAN" | "RHODES";
+export type InstrumentType =
+  | "ORGAN"
+  | "RHODES";
 
 export class AudioEngine {
+
   private instrument: Instrument;
 
-  private instrumentType: InstrumentType = "ORGAN";
+  private instrumentType:
+    InstrumentType =
+    "ORGAN";
 
-  private volume = 0.3;
+  private volume =
+    0.3;
+
+  /*
+  |--------------------------------------------------------------------------
+  | RECORDING AUDIO DESTINATION
+  |--------------------------------------------------------------------------
+  |
+  | Tone audio continues going to the speakers normally.
+  |
+  | We additionally tap the Tone master destination and send the same
+  | audio into a MediaStreamAudioDestinationNode for MediaRecorder.
+  |
+  |--------------------------------------------------------------------------
+  */
+
+  private recordingDestination:
+    MediaStreamAudioDestinationNode | null =
+    null;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | CONSTRUCTOR
+  |--------------------------------------------------------------------------
+  */
 
   constructor() {
-    this.instrument = new Organ();
+
+    this.instrument =
+      new Organ();
+
   }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | START
+  |--------------------------------------------------------------------------
+  */
 
   async start(): Promise<void> {
+
     await Tone.start();
 
-    if (Tone.getContext().state !== "running") {
-      await Tone.getContext().resume();
+    if (
+      Tone.getContext().state !==
+      "running"
+    ) {
+
+      await Tone.getContext()
+        .resume();
+
     }
+
   }
 
-  play(notes: string[]): void {
-    if (notes.length === 0) {
+
+  /*
+  |--------------------------------------------------------------------------
+  | PLAY
+  |--------------------------------------------------------------------------
+  */
+
+  play(
+    notes: string[]
+  ): void {
+
+    if (
+      notes.length === 0
+    ) {
+
       return;
+
     }
 
-    this.instrument.play(notes);
+    this.instrument.play(
+      notes
+    );
+
   }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | STOP
+  |--------------------------------------------------------------------------
+  */
 
   stop(): void {
+
     this.instrument.stop();
+
   }
 
-  setVolume(value: number): void {
-    this.volume = Math.max(0, Math.min(1, value));
 
-    this.instrument.setVolume(this.volume);
+  /*
+  |--------------------------------------------------------------------------
+  | VOLUME
+  |--------------------------------------------------------------------------
+  */
+
+  setVolume(
+    value: number
+  ): void {
+
+    this.volume =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          value
+        )
+      );
+
+    this.instrument.setVolume(
+      this.volume
+    );
+
   }
 
-  setFilter(frequency: number): void {
-    this.instrument.setFilter(frequency);
+
+  /*
+  |--------------------------------------------------------------------------
+  | FILTER
+  |--------------------------------------------------------------------------
+  */
+
+  setFilter(
+    frequency: number
+  ): void {
+
+    this.instrument.setFilter(
+      frequency
+    );
+
   }
 
-  setInstrument(type: InstrumentType): void {
-    if (type === this.instrumentType) {
+
+  /*
+  |--------------------------------------------------------------------------
+  | INSTRUMENT
+  |--------------------------------------------------------------------------
+  */
+
+  setInstrument(
+    type: InstrumentType
+  ): void {
+
+    if (
+      type ===
+      this.instrumentType
+    ) {
+
       return;
+
     }
+
 
     /*
     |--------------------------------------------------------------------------
-    | Stop old instrument
+    | STOP OLD INSTRUMENT
     |--------------------------------------------------------------------------
     */
 
     this.instrument.stop();
 
+
     /*
     |--------------------------------------------------------------------------
-    | Dispose old Tone nodes
+    | DISPOSE OLD TONE NODES
     |--------------------------------------------------------------------------
     */
 
     this.instrument.dispose();
 
+
     /*
     |--------------------------------------------------------------------------
-    | Create actual new instrument
+    | CREATE NEW INSTRUMENT
     |--------------------------------------------------------------------------
     */
 
-    if (type === "ORGAN") {
-      this.instrument = new Organ();
+    if (
+      type ===
+      "ORGAN"
+    ) {
+
+      this.instrument =
+        new Organ();
+
     } else {
-      this.instrument = new Rhodes();
+
+      this.instrument =
+        new Rhodes();
+
     }
 
+
     /*
     |--------------------------------------------------------------------------
-    | Restore volume
+    | RESTORE VOLUME
     |--------------------------------------------------------------------------
     */
 
-    this.instrument.setVolume(this.volume);
+    this.instrument.setVolume(
+      this.volume
+    );
 
-    this.instrumentType = type;
+
+    this.instrumentType =
+      type;
+
   }
 
-  getInstrument(): InstrumentType {
+
+  /*
+  |--------------------------------------------------------------------------
+  | GET INSTRUMENT
+  |--------------------------------------------------------------------------
+  */
+
+  getInstrument():
+    InstrumentType {
+
     return this.instrumentType;
+
   }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | RECORDING STREAM
+  |--------------------------------------------------------------------------
+  |
+  | Returns the exact audio generated by Tone.js.
+  |
+  | The first call creates the destination.
+  | Later calls reuse it.
+  |
+  |--------------------------------------------------------------------------
+  */
+
+  getRecordingStream():
+    MediaStream {
+
+    if (
+      !this.recordingDestination
+    ) {
+
+      this.recordingDestination =
+        Tone.getContext()
+          .createMediaStreamDestination();
+
+
+      /*
+      |--------------------------------------------------------------------------
+      | TONE MASTER → RECORDING
+      |--------------------------------------------------------------------------
+      */
+
+      Tone.getDestination()
+        .connect(
+          this.recordingDestination
+        );
+
+    }
+
+
+    return this.recordingDestination
+      .stream;
+
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | DISPOSE
+  |--------------------------------------------------------------------------
+  */
 
   dispose(): void {
+
     this.instrument.dispose();
+
+
+    if (
+      this.recordingDestination
+    ) {
+
+      /*
+      |--------------------------------------------------------------------------
+      | Disconnect Tone master from recording destination.
+      |--------------------------------------------------------------------------
+      */
+
+      Tone.getDestination()
+        .disconnect(
+          this.recordingDestination
+        );
+
+
+      this.recordingDestination =
+        null;
+
+    }
+
   }
+
 }

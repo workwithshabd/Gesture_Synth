@@ -5,32 +5,38 @@
 |
 | Gesture Synth
 |
-| TRANSPOSE BEHAVIOUR
+| TRANSPOSE
 |
 |   Transpose selector:
-|       chooses the transpose amount
+|       chooses transpose amount
 |
 |   Transpose gesture:
-|       acts ONLY as an ON / OFF switch
+|       ONLY toggles transpose ON / OFF
 |
 | Example:
 |
-|   KEY        = C
-|   TRANSPOSE  = +3
+|   KEY = C
+|   TRANSPOSE = +3
 |
 |   OFF → C
 |   ON  → D#
 |   OFF → C
 |   ON  → D#
 |
-| INSTRUMENT BEHAVIOUR
+| OCTAVE
 |
-|   Instrument selector:
-|       chooses the active instrument
+|   Higher gesture:
+|       +12
 |
-|   Supported:
-|       ORGAN
-|       RHODES
+|   Lower gesture:
+|       -12
+|
+|   Neutral:
+|       keeps previous octave
+|
+| IMPORTANT:
+|
+|   Octave and transpose are completely independent.
 |
 |--------------------------------------------------------------------------
 */
@@ -66,7 +72,18 @@ import { getTiltDirection } from "./gestures/TiltDetector";
 
 import { AudioEngine } from "./audio/AudioEngine";
 
-import type { InstrumentType } from "./audio/AudioEngine";
+import type {
+  InstrumentType,
+} from "./audio/AudioEngine";
+
+import {
+  SCALE_INTERVALS,
+} from "./music/scales";
+
+import type {
+  ScaleName,
+} from "./music/types";
+
 
 /*
 |--------------------------------------------------------------------------
@@ -74,13 +91,29 @@ import type { InstrumentType } from "./audio/AudioEngine";
 |--------------------------------------------------------------------------
 */
 
-type LeftTiltDirection = "INWARD" | "OUTWARD";
+type LeftTiltDirection =
+  | "INWARD"
+  | "OUTWARD";
 
-type RightTiltDirection = "INWARD" | "OUTWARD" | "NEUTRAL";
+type RightTiltDirection =
+  | "INWARD"
+  | "OUTWARD"
+  | "NEUTRAL";
 
-type ChordQuality = "MAJOR" | "MINOR";
+type ChordQuality =
+  | "MAJOR"
+  | "MINOR";
 
-type ChordShape = "ROOT" | "INVERSION" | "SEVENTH" | "DOMINANT_DIMINISHED";
+type ChordShape =
+  | "ROOT"
+  | "INVERSION"
+  | "SEVENTH"
+  | "DOMINANT_DIMINISHED";
+
+type RecordingMode =
+  | "SCREEN"
+  | "SCREEN_MIC";
+
 
 /*
 |--------------------------------------------------------------------------
@@ -95,42 +128,78 @@ function getRightPalmAngle(
     z?: number;
   }[],
 ): number | null {
-  if (!landmarks || landmarks.length < 18) {
+
+  if (
+    !landmarks ||
+    landmarks.length < 18
+  ) {
     return null;
   }
 
-  const indexMcp = landmarks[5];
+  const indexMcp =
+    landmarks[5];
 
-  const pinkyMcp = landmarks[17];
+  const pinkyMcp =
+    landmarks[17];
 
-  if (!indexMcp || !pinkyMcp) {
+  if (
+    !indexMcp ||
+    !pinkyMcp
+  ) {
     return null;
   }
 
-  const dx = pinkyMcp.x - indexMcp.x;
+  const dx =
+    pinkyMcp.x -
+    indexMcp.x;
 
-  const dy = pinkyMcp.y - indexMcp.y;
+  const dy =
+    pinkyMcp.y -
+    indexMcp.y;
 
-  if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
+  if (
+    !Number.isFinite(dx) ||
+    !Number.isFinite(dy)
+  ) {
     return null;
   }
 
-  if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) {
+  if (
+    Math.abs(dx) < 0.0001 &&
+    Math.abs(dy) < 0.0001
+  ) {
     return null;
   }
 
-  let angle = Math.atan2(dx, -dy) * (180 / Math.PI);
+  let angle =
+    Math.atan2(
+      dx,
+      -dy,
+    ) *
+    (180 / Math.PI);
 
-  if (angle < 0) {
+  if (
+    angle < 0
+  ) {
     angle += 360;
   }
 
-  if (angle > 180) {
-    angle = 360 - angle;
+  if (
+    angle > 180
+  ) {
+    angle =
+      360 - angle;
   }
 
-  return Math.max(0, Math.min(180, angle));
+  return Math.max(
+    0,
+    Math.min(
+      180,
+      angle,
+    ),
+  );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -138,17 +207,25 @@ function getRightPalmAngle(
 |--------------------------------------------------------------------------
 */
 
-function getRightTiltFromAngle(angle: number): RightTiltDirection {
-  if (angle >= 120) {
+function getRightTiltFromAngle(
+  angle: number,
+): RightTiltDirection {
+
+  if (
+    angle >= 120
+  ) {
     return "INWARD";
   }
 
-  if (angle >= 60) {
+  if (
+    angle >= 60
+  ) {
     return "NEUTRAL";
   }
 
   return "OUTWARD";
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -156,7 +233,9 @@ function getRightTiltFromAngle(angle: number): RightTiltDirection {
 |--------------------------------------------------------------------------
 */
 
-const KEY_OFFSETS: Record<string, number> = {
+const KEY_OFFSETS:
+  Record<string, number> = {
+
   C: 0,
 
   "C#": 1,
@@ -182,6 +261,7 @@ const KEY_OFFSETS: Record<string, number> = {
   B: 11,
 };
 
+
 /*
 |--------------------------------------------------------------------------
 | KEY NAMES
@@ -203,45 +283,37 @@ const KEY_NAMES = [
   "B",
 ];
 
+
 /*
 |--------------------------------------------------------------------------
-| SCALE MAP
+| SCALE DEGREE MAP
+|--------------------------------------------------------------------------
+|
+| Gesture mapper returns Roman numeral degrees.
+|
+| The scale arrays use numeric indexes.
+|
 |--------------------------------------------------------------------------
 */
 
-const SCALE_INTERVALS: Record<string, Record<string, number>> = {
-  MAJOR: {
-    I: 0,
+const SCALE_DEGREE_INDEX:
+  Record<string, number> = {
 
-    II: 2,
+  I: 0,
 
-    III: 4,
+  II: 1,
 
-    IV: 5,
+  III: 2,
 
-    V: 7,
+  IV: 3,
 
-    VI: 9,
+  V: 4,
 
-    VII: 11,
-  },
+  VI: 5,
 
-  MINOR: {
-    I: 0,
-
-    II: 2,
-
-    III: 3,
-
-    IV: 5,
-
-    V: 7,
-
-    VI: 8,
-
-    VII: 10,
-  },
+  VII: 6,
 };
+
 
 /*
 |--------------------------------------------------------------------------
@@ -249,7 +321,9 @@ const SCALE_INTERVALS: Record<string, Record<string, number>> = {
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_VOLUME = 0.3;
+const DEFAULT_VOLUME =
+  0.3;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -258,17 +332,25 @@ const DEFAULT_VOLUME = 0.3;
 */
 
 function App() {
+
   /*
   |--------------------------------------------------------------------------
   | AUDIO ENGINE
   |--------------------------------------------------------------------------
   */
 
-  const audioRef = useRef<AudioEngine | null>(null);
+  const audioRef =
+    useRef<AudioEngine | null>(
+      null,
+    );
 
-  if (!audioRef.current) {
-    audioRef.current = new AudioEngine();
+  if (
+    !audioRef.current
+  ) {
+    audioRef.current =
+      new AudioEngine();
   }
+
 
   /*
   |--------------------------------------------------------------------------
@@ -276,7 +358,59 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [audioStarted, setAudioStarted] = useState(false);
+  const [
+    audioStarted,
+    setAudioStarted,
+  ] = useState(false);
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | RECORDING
+  |--------------------------------------------------------------------------
+  */
+
+  const [
+    recording,
+    setRecording,
+  ] = useState(false);
+
+  const [
+    recordingMode,
+    setRecordingMode,
+  ] =
+    useState<RecordingMode>(
+      "SCREEN",
+    );
+
+  const mediaRecorderRef =
+    useRef<MediaRecorder | null>(
+      null,
+    );
+
+  const recordedChunksRef =
+    useRef<Blob[]>([]);
+
+  const displayStreamRef =
+    useRef<MediaStream | null>(
+      null,
+    );
+
+  const microphoneStreamRef =
+    useRef<MediaStream | null>(
+      null,
+    );
+
+  const recordingAudioContextRef =
+    useRef<AudioContext | null>(
+      null,
+    );
+
+  const recordingDestinationRef =
+    useRef<
+      MediaStreamAudioDestinationNode | null
+    >(null);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -284,9 +418,19 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [selectedKey, setSelectedKey] = useState("C");
+  const [
+    selectedKey,
+    setSelectedKey,
+  ] = useState("C");
 
-  const [selectedScale, setSelectedScale] = useState("MAJOR");
+  const [
+    selectedScale,
+    setSelectedScale,
+  ] =
+    useState<ScaleName>(
+      "major",
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -294,16 +438,32 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [selectedInstrument, setSelectedInstrument] =
-    useState<InstrumentType>("ORGAN");
+  const [
+    selectedInstrument,
+    setSelectedInstrument,
+  ] =
+    useState<InstrumentType>(
+      "ORGAN",
+    );
+
 
   /*
   |--------------------------------------------------------------------------
   | TRANSPOSE AMOUNT
   |--------------------------------------------------------------------------
+  |
+  | This value is persistent.
+  |
+  | The transpose gesture NEVER changes it.
+  |
+  |--------------------------------------------------------------------------
   */
 
-  const [transposeSemitones, setTransposeSemitones] = useState(0);
+  const [
+    transposeSemitones,
+    setTransposeSemitones,
+  ] = useState(0);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -311,17 +471,43 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [transposeEnabled, setTransposeEnabled] = useState(false);
+  const [
+    transposeEnabled,
+    setTransposeEnabled,
+  ] = useState(false);
 
-  const [guideOpen, setGuideOpen] = useState(false);
+
+  /*
+  |--------------------------------------------------------------------------
+  | GUIDE
+  |--------------------------------------------------------------------------
+  */
+
+  const [
+    guideOpen,
+    setGuideOpen,
+  ] = useState(false);
+
 
   /*
   |--------------------------------------------------------------------------
   | EFFECTIVE TRANSPOSE
   |--------------------------------------------------------------------------
+  |
+  | OFF:
+  |   0
+  |
+  | ON:
+  |   selected transpose amount
+  |
+  |--------------------------------------------------------------------------
   */
 
-  const effectiveTranspose = transposeEnabled ? transposeSemitones : 0;
+  const effectiveTranspose =
+    transposeEnabled
+      ? transposeSemitones
+      : 0;
+
 
   /*
   |--------------------------------------------------------------------------
@@ -329,19 +515,42 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const effectiveKey = useMemo(() => {
-    const baseOffset = KEY_OFFSETS[selectedKey];
+  const effectiveKey =
+    useMemo(() => {
 
-    if (baseOffset === undefined) {
-      return selectedKey;
-    }
+      const baseOffset =
+        KEY_OFFSETS[
+          selectedKey
+        ];
 
-    const rawOffset = baseOffset + effectiveTranspose;
+      if (
+        baseOffset ===
+        undefined
+      ) {
+        return selectedKey;
+      }
 
-    const normalizedOffset = ((rawOffset % 12) + 12) % 12;
+      const rawOffset =
+        baseOffset +
+        effectiveTranspose;
 
-    return KEY_NAMES[normalizedOffset];
-  }, [selectedKey, effectiveTranspose]);
+      const normalizedOffset =
+        (
+          (
+            rawOffset % 12
+          ) +
+          12
+        ) % 12;
+
+      return KEY_NAMES[
+        normalizedOffset
+      ];
+
+    }, [
+      selectedKey,
+      effectiveTranspose,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -350,34 +559,92 @@ function App() {
   |
   | IMPORTANT:
   |
-  | This is intentionally unchanged from the original implementation.
+  | Transpose OFF:
+  |
+  |   Selecting D means base key = D.
+  |
+  | Transpose ON:
+  |
+  |   Selecting displayed D means calculate the underlying
+  |   base key by removing the transpose amount.
   |
   |--------------------------------------------------------------------------
   */
 
-  const handleKeyChange = useCallback(
-    (displayedKey: string) => {
-      if (!transposeEnabled) {
-        setSelectedKey(displayedKey);
+  const handleKeyChange =
+    useCallback(
+      (
+        displayedKey: string,
+      ) => {
 
-        return;
-      }
+        /*
+        |--------------------------------------------------------------------------
+        | TRANSPOSE OFF
+        |--------------------------------------------------------------------------
+        */
 
-      const displayedOffset = KEY_OFFSETS[displayedKey];
+        if (
+          !transposeEnabled
+        ) {
 
-      if (displayedOffset === undefined) {
-        return;
-      }
+          setSelectedKey(
+            displayedKey,
+          );
 
-      const baseOffset =
-        (((displayedOffset - transposeSemitones) % 12) + 12) % 12;
+          return;
+        }
 
-      const baseKey = KEY_NAMES[baseOffset];
 
-      setSelectedKey(baseKey);
-    },
-    [transposeEnabled, transposeSemitones],
-  );
+        /*
+        |--------------------------------------------------------------------------
+        | TRANSPOSE ON
+        |--------------------------------------------------------------------------
+        */
+
+        const displayedOffset =
+          KEY_OFFSETS[
+            displayedKey
+          ];
+
+        if (
+          displayedOffset ===
+          undefined
+        ) {
+          return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | REMOVE TRANSPOSE
+        |--------------------------------------------------------------------------
+        */
+
+        const baseOffset =
+          (
+            displayedOffset -
+            transposeSemitones +
+            12
+          ) % 12;
+
+
+        const baseKey =
+          KEY_NAMES[
+            baseOffset
+          ];
+
+
+        setSelectedKey(
+          baseKey,
+        );
+
+      },
+      [
+        transposeEnabled,
+        transposeSemitones,
+      ],
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -385,13 +652,18 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [trackingResult, setTrackingResult] = useState<HandTrackingResult>({
-    leftHand: null,
+  const [
+    trackingResult,
+    setTrackingResult,
+  ] =
+    useState<HandTrackingResult>({
+      leftHand: null,
 
-    rightHand: null,
+      rightHand: null,
 
-    timestamp: 0,
-  });
+      timestamp: 0,
+    });
+
 
   /*
   |--------------------------------------------------------------------------
@@ -399,9 +671,20 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const handleResults = useCallback((result: HandTrackingResult) => {
-    setTrackingResult(result);
-  }, []);
+  const handleResults =
+    useCallback(
+      (
+        result: HandTrackingResult,
+      ) => {
+
+        setTrackingResult(
+          result,
+        );
+
+      },
+      [],
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -409,23 +692,50 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const startAudio = useCallback(async () => {
-    if (audioStarted) {
-      return;
-    }
+  const startAudio =
+    useCallback(
+      async () => {
 
-    try {
-      await audioRef.current?.start();
+        if (
+          audioStarted
+        ) {
+          return;
+        }
 
-      audioRef.current?.setVolume(DEFAULT_VOLUME);
+        try {
 
-      audioRef.current?.setInstrument(selectedInstrument);
+          await audioRef.current?.start();
 
-      setAudioStarted(true);
-    } catch (error) {
-      console.error("Audio start failed:", error);
-    }
-  }, [audioStarted, selectedInstrument]);
+          audioRef.current?.setVolume(
+            DEFAULT_VOLUME,
+          );
+
+          audioRef.current?.setInstrument(
+            selectedInstrument,
+          );
+
+          setAudioStarted(
+            true,
+          );
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            "Audio start failed:",
+            error,
+          );
+
+        }
+
+      },
+      [
+        audioStarted,
+        selectedInstrument,
+      ],
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -433,7 +743,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const previousNotesRef = useRef<string>("");
+  const previousNotesRef =
+    useRef<string>("");
+
 
   /*
   |--------------------------------------------------------------------------
@@ -441,7 +753,11 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const previousInstrumentRef = useRef<InstrumentType>(selectedInstrument);
+  const previousInstrumentRef =
+    useRef<InstrumentType>(
+      selectedInstrument,
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -450,19 +766,27 @@ function App() {
   */
 
   useEffect(() => {
-    if (!audioStarted) {
+
+    if (
+      !audioStarted
+    ) {
       return;
     }
 
-    const audio = audioRef.current;
+    const audio =
+      audioRef.current;
 
     if (!audio) {
       return;
     }
 
-    if (previousInstrumentRef.current === selectedInstrument) {
+    if (
+      previousInstrumentRef.current ===
+      selectedInstrument
+    ) {
       return;
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -472,13 +796,17 @@ function App() {
 
     audio.stop();
 
+
     /*
     |--------------------------------------------------------------------------
     | SWITCH INSTRUMENT
     |--------------------------------------------------------------------------
     */
 
-    audio.setInstrument(selectedInstrument);
+    audio.setInstrument(
+      selectedInstrument,
+    );
+
 
     /*
     |--------------------------------------------------------------------------
@@ -486,10 +814,17 @@ function App() {
     |--------------------------------------------------------------------------
     */
 
-    previousNotesRef.current = "";
+    previousNotesRef.current =
+      "";
 
-    previousInstrumentRef.current = selectedInstrument;
-  }, [selectedInstrument, audioStarted]);
+    previousInstrumentRef.current =
+      selectedInstrument;
+
+  }, [
+    selectedInstrument,
+    audioStarted,
+  ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -497,13 +832,23 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rawLeft = useMemo(() => {
-    if (!trackingResult.leftHand) {
-      return null;
-    }
+  const rawLeft =
+    useMemo(() => {
 
-    return detectFingers(trackingResult.leftHand);
-  }, [trackingResult.leftHand]);
+      if (
+        !trackingResult.leftHand
+      ) {
+        return null;
+      }
+
+      return detectFingers(
+        trackingResult.leftHand,
+      );
+
+    }, [
+      trackingResult.leftHand,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -511,13 +856,23 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rawRight = useMemo(() => {
-    if (!trackingResult.rightHand) {
-      return null;
-    }
+  const rawRight =
+    useMemo(() => {
 
-    return detectFingers(trackingResult.rightHand);
-  }, [trackingResult.rightHand]);
+      if (
+        !trackingResult.rightHand
+      ) {
+        return null;
+      }
+
+      return detectFingers(
+        trackingResult.rightHand,
+      );
+
+    }, [
+      trackingResult.rightHand,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -525,9 +880,16 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const stableLeft = useStableFingers(rawLeft);
+  const stableLeft =
+    useStableFingers(
+      rawLeft,
+    );
 
-  const stableRight = useStableFingers(rawRight);
+  const stableRight =
+    useStableFingers(
+      rawRight,
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -535,11 +897,17 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const leftTilt: LeftTiltDirection = trackingResult.leftHand?.landmarks
-    ? getTiltDirection(trackingResult.leftHand.landmarks, "Left") === "INWARD"
-      ? "INWARD"
-      : "OUTWARD"
-    : "OUTWARD";
+  const leftTilt:
+    LeftTiltDirection =
+    trackingResult.leftHand?.landmarks
+      ? getTiltDirection(
+          trackingResult.leftHand.landmarks,
+          "Left",
+        ) === "INWARD"
+        ? "INWARD"
+        : "OUTWARD"
+      : "OUTWARD";
+
 
   /*
   |--------------------------------------------------------------------------
@@ -547,23 +915,37 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const leftGesture = useMemo(() => {
-    const gesture = mapLeftGesture(stableLeft);
+  const leftGesture =
+    useMemo(() => {
 
-    if (!gesture) {
-      return null;
-    }
+      const gesture =
+        mapLeftGesture(
+          stableLeft,
+        );
 
-    const quality: ChordQuality = leftTilt === "INWARD" ? "MINOR" : "MAJOR";
+      if (!gesture) {
+        return null;
+      }
 
-    return {
-      ...gesture,
+      const quality:
+        ChordQuality =
+        leftTilt === "INWARD"
+          ? "MINOR"
+          : "MAJOR";
 
-      quality,
+      return {
+        ...gesture,
 
-      tilt: leftTilt,
-    };
-  }, [stableLeft, leftTilt]);
+        quality,
+
+        tilt: leftTilt,
+      };
+
+    }, [
+      stableLeft,
+      leftTilt,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -571,19 +953,35 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rightGesture = useMemo(() => {
-    return mapRightGesture(stableRight);
-  }, [stableRight]);
+  const rightGesture =
+    useMemo(() => {
+
+      return mapRightGesture(
+        stableRight,
+      );
+
+    }, [
+      stableRight,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
-  | OCTAVE
+  | OCTAVE GESTURE
   |--------------------------------------------------------------------------
   */
 
-  const octave = useMemo(() => {
-    return mapOctave(stableRight);
-  }, [stableRight]);
+  const octave =
+    useMemo(() => {
+
+      return mapOctave(
+        stableRight,
+      );
+
+    }, [
+      stableRight,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -591,7 +989,11 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const semitoneGestureActive = isChordSemitoneGesture(stableRight);
+  const semitoneGestureActive =
+    isChordSemitoneGesture(
+      stableRight,
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -599,25 +1001,47 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rightTilt = useMemo<RightTiltDirection>(() => {
-    if (!semitoneGestureActive) {
-      return "NEUTRAL";
-    }
+  const rightTilt =
+    useMemo<RightTiltDirection>(
+      () => {
 
-    const landmarks = trackingResult.rightHand?.landmarks;
+        if (
+          !semitoneGestureActive
+        ) {
+          return "NEUTRAL";
+        }
 
-    if (!landmarks) {
-      return "NEUTRAL";
-    }
+        const landmarks =
+          trackingResult
+            .rightHand
+            ?.landmarks;
 
-    const angle = getRightPalmAngle(landmarks);
+        if (!landmarks) {
+          return "NEUTRAL";
+        }
 
-    if (angle === null) {
-      return "NEUTRAL";
-    }
+        const angle =
+          getRightPalmAngle(
+            landmarks,
+          );
 
-    return getRightTiltFromAngle(angle);
-  }, [trackingResult.rightHand, semitoneGestureActive]);
+        if (
+          angle === null
+        ) {
+          return "NEUTRAL";
+        }
+
+        return getRightTiltFromAngle(
+          angle,
+        );
+
+      },
+      [
+        trackingResult.rightHand,
+        semitoneGestureActive,
+      ],
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -625,7 +1049,13 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const { chordSemitone } = useChordSemitoneController(stableRight);
+  const {
+    chordSemitone,
+  } =
+    useChordSemitoneController(
+      stableRight,
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -633,18 +1063,27 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const effectiveChordSemitone = semitoneGestureActive
-    ? rightTilt === "INWARD"
-      ? -1
-      : rightTilt === "OUTWARD"
-        ? 1
-        : 0
-    : chordSemitone;
+  const effectiveChordSemitone =
+    semitoneGestureActive
+      ? rightTilt === "INWARD"
+        ? -1
+        : rightTilt === "OUTWARD"
+          ? 1
+          : 0
+      : chordSemitone;
 
-  const safeChordSemitone = Math.max(
-    -1,
-    Math.min(1, Math.round(effectiveChordSemitone)),
-  );
+
+  const safeChordSemitone =
+    Math.max(
+      -1,
+      Math.min(
+        1,
+        Math.round(
+          effectiveChordSemitone,
+        ),
+      ),
+    );
+
 
   /*
   |--------------------------------------------------------------------------
@@ -652,47 +1091,155 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const transposeGestureActive = isTransposeGesture(stableRight);
+  const transposeGestureActive =
+    isTransposeGesture(
+      stableRight,
+    );
+
 
   /*
   |--------------------------------------------------------------------------
   | TRANSPOSE EDGE TRIGGER
   |--------------------------------------------------------------------------
+  |
+  | One toggle per gesture.
+  |
+  | Releasing the gesture re-arms it.
+  |
+  |--------------------------------------------------------------------------
   */
 
-  const transposeGestureTriggeredRef = useRef(false);
+  const transposeGestureTriggeredRef =
+    useRef(false);
 
   useEffect(() => {
-    if (!transposeGestureActive) {
-      transposeGestureTriggeredRef.current = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | RELEASE → RE-ARM
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      !transposeGestureActive
+    ) {
+
+      transposeGestureTriggeredRef.current =
+        false;
 
       return;
     }
 
-    if (transposeGestureTriggeredRef.current) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | ALREADY TRIGGERED
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      transposeGestureTriggeredRef.current
+    ) {
       return;
     }
 
-    transposeGestureTriggeredRef.current = true;
 
-    setTransposeEnabled((previous) => !previous);
+    /*
+    |--------------------------------------------------------------------------
+    | TRIGGER
+    |--------------------------------------------------------------------------
+    */
 
-    console.log("[TRANSPOSE SWITCH]", {
-      gesture: "THUMB_ALONE",
+    transposeGestureTriggeredRef.current =
+      true;
 
-      action: "TOGGLE",
 
-      selectedTranspose: transposeSemitones,
-    });
-  }, [transposeGestureActive, transposeSemitones]);
+    /*
+    |--------------------------------------------------------------------------
+    | TOGGLE ONLY
+    |--------------------------------------------------------------------------
+    |
+    | Do NOT change:
+    |
+    |   transposeSemitones
+    |   selectedKey
+    |   octaveOffset
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    setTransposeEnabled(
+      previous =>
+        !previous,
+    );
+
+  }, [
+    transposeGestureActive,
+  ]);
+
 
   /*
   |--------------------------------------------------------------------------
-  | OCTAVE OFFSET
+  | OCTAVE STATE
+  |--------------------------------------------------------------------------
+  |
+  | Completely independent from transpose.
+  |
   |--------------------------------------------------------------------------
   */
 
-  const octaveOffset = octave === "HIGHER" ? 12 : octave === "LOWER" ? -12 : 0;
+  const [
+    octaveOffset,
+    setOctaveOffset,
+  ] = useState(0);
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | UPDATE OCTAVE
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+
+    if (
+      octave === "HIGHER"
+    ) {
+
+      setOctaveOffset(
+        12,
+      );
+
+      return;
+    }
+
+
+    if (
+      octave === "LOWER"
+    ) {
+
+      setOctaveOffset(
+        -12,
+      );
+
+      return;
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEUTRAL
+    |--------------------------------------------------------------------------
+    |
+    | Do absolutely nothing.
+    |
+    |--------------------------------------------------------------------------
+    */
+
+  }, [
+    octave,
+  ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -700,23 +1247,43 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const volume = useMemo(() => {
-    const landmarks = trackingResult.rightHand?.landmarks;
+  const volume =
+    useMemo(() => {
 
-    if (!landmarks || landmarks.length === 0) {
-      return DEFAULT_VOLUME;
-    }
+      const landmarks =
+        trackingResult
+          .rightHand
+          ?.landmarks;
 
-    const wrist = landmarks[0];
+      if (
+        !landmarks ||
+        landmarks.length === 0
+      ) {
+        return DEFAULT_VOLUME;
+      }
 
-    if (!wrist) {
-      return DEFAULT_VOLUME;
-    }
+      const wrist =
+        landmarks[0];
 
-    const raw = 1 - wrist.y;
+      if (!wrist) {
+        return DEFAULT_VOLUME;
+      }
 
-    return Math.max(0, Math.min(1, raw));
-  }, [trackingResult.rightHand]);
+      const raw =
+        1 - wrist.y;
+
+      return Math.max(
+        0,
+        Math.min(
+          1,
+          raw,
+        ),
+      );
+
+    }, [
+      trackingResult.rightHand,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -724,37 +1291,51 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const notes = useMemo(() => {
-    if (!leftGesture) {
-      return [];
-    }
+  const notes =
+    useMemo(() => {
 
-    return generateChordNotes({
-      degree: leftGesture.degree,
+      if (
+        !leftGesture
+      ) {
+        return [];
+      }
 
-      quality: leftGesture.quality,
+      return generateChordNotes({
+        degree:
+          leftGesture.degree,
 
-      shape: rightGesture?.shape ?? "ROOT",
+        quality:
+          leftGesture.quality,
 
-      key: selectedKey,
+        shape:
+          rightGesture?.shape ??
+          "ROOT",
 
-      scale: selectedScale,
+        key:
+          selectedKey,
 
-      chordSemitone: safeChordSemitone,
+        scale:
+          selectedScale,
 
-      transpose: effectiveTranspose,
+        chordSemitone:
+          safeChordSemitone,
 
+        transpose:
+          effectiveTranspose,
+
+        octaveOffset,
+      });
+
+    }, [
+      leftGesture,
+      rightGesture,
+      selectedKey,
+      selectedScale,
+      safeChordSemitone,
+      effectiveTranspose,
       octaveOffset,
-    });
-  }, [
-    leftGesture,
-    rightGesture,
-    selectedKey,
-    selectedScale,
-    safeChordSemitone,
-    effectiveTranspose,
-    octaveOffset,
-  ]);
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -762,34 +1343,67 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const chordName = useMemo(() => {
-    if (!leftGesture) {
-      return "—";
-    }
+  const chordName =
+    useMemo(() => {
 
-    const keyOffset = KEY_OFFSETS[selectedKey];
+      if (
+        !leftGesture
+      ) {
+        return "—";
+      }
 
-    const scale = SCALE_INTERVALS[selectedScale];
+      const keyOffset =
+        KEY_OFFSETS[
+          selectedKey
+        ];
 
-    const degreeOffset = scale?.[leftGesture.degree];
+      const scale =
+        SCALE_INTERVALS[
+          selectedScale
+        ];
 
-    if (keyOffset === undefined || degreeOffset === undefined) {
-      return "—";
-    }
+      const degreeIndex =
+        SCALE_DEGREE_INDEX[
+          leftGesture.degree
+        ];
 
-    const midi =
-      60 + keyOffset + degreeOffset + effectiveTranspose + safeChordSemitone;
+      const degreeOffset =
+        degreeIndex === undefined
+          ? undefined
+          : scale?.[degreeIndex];
 
-    const note = midiToNoteName(midi);
+      if (
+        keyOffset === undefined ||
+        degreeOffset === undefined
+      ) {
+        return "—";
+      }
 
-    return leftGesture.quality === "MINOR" ? `${note} minor` : `${note} major`;
-  }, [
-    selectedKey,
-    selectedScale,
-    leftGesture,
-    effectiveTranspose,
-    safeChordSemitone,
-  ]);
+      const midi =
+        60 +
+        keyOffset +
+        degreeOffset +
+        effectiveTranspose +
+        safeChordSemitone;
+
+      const note =
+        midiToNoteName(
+          midi,
+        );
+
+      return leftGesture.quality ===
+        "MINOR"
+        ? `${note} minor`
+        : `${note} major`;
+
+    }, [
+      selectedKey,
+      selectedScale,
+      leftGesture,
+      effectiveTranspose,
+      safeChordSemitone,
+    ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -798,36 +1412,59 @@ function App() {
   */
 
   useLayoutEffect(() => {
-    if (!audioStarted) {
+
+    if (
+      !audioStarted
+    ) {
       return;
     }
 
-    const audio = audioRef.current;
+    const audio =
+      audioRef.current;
 
     if (!audio) {
       return;
     }
 
-    if (notes.length === 0) {
-      if (previousNotesRef.current !== "") {
+    if (
+      notes.length === 0
+    ) {
+
+      if (
+        previousNotesRef.current !== ""
+      ) {
+
         audio.stop();
 
-        previousNotesRef.current = "";
+        previousNotesRef.current =
+          "";
       }
 
       return;
     }
 
-    const notesKey = notes.join("|");
+    const notesKey =
+      notes.join("|");
 
-    if (notesKey === previousNotesRef.current) {
+    if (
+      notesKey ===
+      previousNotesRef.current
+    ) {
       return;
     }
 
-    audio.play(notes);
+    audio.play(
+      notes,
+    );
 
-    previousNotesRef.current = notesKey;
-  }, [audioStarted, notes]);
+    previousNotesRef.current =
+      notesKey;
+
+  }, [
+    audioStarted,
+    notes,
+  ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -836,12 +1473,644 @@ function App() {
   */
 
   useEffect(() => {
-    if (!audioStarted) {
+
+    if (
+      !audioStarted
+    ) {
       return;
     }
 
-    audioRef.current?.setVolume(volume);
-  }, [audioStarted, volume]);
+    audioRef.current?.setVolume(
+      volume,
+    );
+
+  }, [
+    audioStarted,
+    volume,
+  ]);
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | RECORDING CLEANUP
+  |--------------------------------------------------------------------------
+  */
+
+  const cleanupRecording =
+    useCallback(() => {
+
+      /*
+      |--------------------------------------------------------------------------
+      | STOP SCREEN
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        displayStreamRef.current
+      ) {
+
+        displayStreamRef.current
+          .getTracks()
+          .forEach(
+            track =>
+              track.stop(),
+          );
+
+        displayStreamRef.current =
+          null;
+      }
+
+
+      /*
+      |--------------------------------------------------------------------------
+      | STOP MICROPHONE
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        microphoneStreamRef.current
+      ) {
+
+        microphoneStreamRef.current
+          .getTracks()
+          .forEach(
+            track =>
+              track.stop(),
+          );
+
+        microphoneStreamRef.current =
+          null;
+      }
+
+
+      /*
+      |--------------------------------------------------------------------------
+      | CLOSE RECORDING CONTEXT
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        recordingAudioContextRef.current
+      ) {
+
+        void recordingAudioContextRef.current.close();
+
+        recordingAudioContextRef.current =
+          null;
+      }
+
+
+      recordingDestinationRef.current =
+        null;
+
+      mediaRecorderRef.current =
+        null;
+
+    }, []);
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | START RECORDING
+  |--------------------------------------------------------------------------
+  */
+
+  const startRecording =
+    useCallback(
+      async () => {
+
+        if (
+          recording
+        ) {
+          return;
+        }
+
+        try {
+
+          /*
+          |--------------------------------------------------------------------------
+          | START TONE
+          |--------------------------------------------------------------------------
+          */
+
+          if (
+            !audioStarted
+          ) {
+
+            await audioRef.current?.start();
+
+            audioRef.current?.setVolume(
+              DEFAULT_VOLUME,
+            );
+
+            audioRef.current?.setInstrument(
+              selectedInstrument,
+            );
+
+            setAudioStarted(
+              true,
+            );
+          }
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | SCREEN
+          |--------------------------------------------------------------------------
+          */
+
+          const displayStream =
+            await navigator
+              .mediaDevices
+              .getDisplayMedia({
+                video: true,
+                audio: false,
+              });
+
+          displayStreamRef.current =
+            displayStream;
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | MICROPHONE
+          |--------------------------------------------------------------------------
+          */
+
+          let microphoneStream:
+            MediaStream | null =
+            null;
+
+          if (
+            recordingMode ===
+            "SCREEN_MIC"
+          ) {
+
+            microphoneStream =
+              await navigator
+                .mediaDevices
+                .getUserMedia({
+                  audio: {
+                    echoCancellation:
+                      true,
+
+                    noiseSuppression:
+                      true,
+
+                    autoGainControl:
+                      true,
+                  },
+
+                  video: false,
+                });
+
+            microphoneStreamRef.current =
+              microphoneStream;
+          }
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | TONE RECORDING STREAM
+          |--------------------------------------------------------------------------
+          */
+
+          const toneStream =
+            audioRef.current
+              ?.getRecordingStream();
+
+          if (!toneStream) {
+
+            throw new Error(
+              "Unable to create Tone recording stream.",
+            );
+          }
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | AUDIO CONTEXT
+          |--------------------------------------------------------------------------
+          */
+
+          const AudioContextClass =
+            window.AudioContext ||
+            (
+              window as typeof window & {
+                webkitAudioContext?:
+                  typeof AudioContext;
+              }
+            ).webkitAudioContext;
+
+          if (
+            !AudioContextClass
+          ) {
+
+            throw new Error(
+              "Web Audio API is not supported.",
+            );
+          }
+
+          const audioContext =
+            new AudioContextClass();
+
+          recordingAudioContextRef.current =
+            audioContext;
+
+          if (
+            audioContext.state ===
+            "suspended"
+          ) {
+
+            await audioContext.resume();
+          }
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | RECORDING DESTINATION
+          |--------------------------------------------------------------------------
+          */
+
+          const destination =
+            audioContext
+              .createMediaStreamDestination();
+
+          recordingDestinationRef.current =
+            destination;
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | TONE → DESTINATION
+          |--------------------------------------------------------------------------
+          */
+
+          const toneSource =
+            audioContext
+              .createMediaStreamSource(
+                toneStream,
+              );
+
+          toneSource.connect(
+            destination,
+          );
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | MICROPHONE → DESTINATION
+          |--------------------------------------------------------------------------
+          */
+
+          if (
+            microphoneStream
+          ) {
+
+            const microphoneSource =
+              audioContext
+                .createMediaStreamSource(
+                  microphoneStream,
+                );
+
+            microphoneSource.connect(
+              destination,
+            );
+          }
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | FINAL RECORDING STREAM
+          |--------------------------------------------------------------------------
+          */
+
+          const finalStream =
+            new MediaStream();
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | SCREEN VIDEO
+          |--------------------------------------------------------------------------
+          */
+
+          const videoTrack =
+            displayStream
+              .getVideoTracks()[0];
+
+          if (!videoTrack) {
+
+            throw new Error(
+              "No screen video track was created.",
+            );
+          }
+
+          finalStream.addTrack(
+            videoTrack,
+          );
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | MIXED AUDIO
+          |--------------------------------------------------------------------------
+          */
+
+          destination.stream
+            .getAudioTracks()
+            .forEach(
+              track =>
+                finalStream.addTrack(
+                  track,
+                ),
+            );
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | MEDIA RECORDER
+          |--------------------------------------------------------------------------
+          */
+
+          const mimeTypes = [
+
+            "video/webm;codecs=vp9,opus",
+
+            "video/webm;codecs=vp8,opus",
+
+            "video/webm",
+
+          ];
+
+          const mimeType =
+            mimeTypes.find(
+              type =>
+                MediaRecorder.isTypeSupported(
+                  type,
+                ),
+            );
+
+          const recorder =
+            mimeType
+              ? new MediaRecorder(
+                  finalStream,
+                  {
+                    mimeType,
+                  },
+                )
+              : new MediaRecorder(
+                  finalStream,
+                );
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | RESET CHUNKS
+          |--------------------------------------------------------------------------
+          */
+
+          recordedChunksRef.current =
+            [];
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | DATA
+          |--------------------------------------------------------------------------
+          */
+
+          recorder.ondataavailable =
+            event => {
+
+              if (
+                event.data &&
+                event.data.size > 0
+              ) {
+
+                recordedChunksRef.current.push(
+                  event.data,
+                );
+              }
+
+            };
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | STOP
+          |--------------------------------------------------------------------------
+          */
+
+          recorder.onstop =
+            () => {
+
+              const blob =
+                new Blob(
+                  recordedChunksRef.current,
+                  {
+                    type:
+                      recorder.mimeType ||
+                      "video/webm",
+                  },
+                );
+
+              const url =
+                URL.createObjectURL(
+                  blob,
+                );
+
+              const anchor =
+                document.createElement(
+                  "a",
+                );
+
+              anchor.href =
+                url;
+
+              anchor.download =
+                `gesture-synth-${new Date()
+                  .toISOString()
+                  .replace(
+                    /[:.]/g,
+                    "-",
+                  )}.webm`;
+
+              document.body.appendChild(
+                anchor,
+              );
+
+              anchor.click();
+
+              anchor.remove();
+
+              window.setTimeout(
+                () => {
+
+                  URL.revokeObjectURL(
+                    url,
+                  );
+
+                },
+                1000,
+              );
+
+              cleanupRecording();
+
+              setRecording(
+                false,
+              );
+
+            };
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | SCREEN SHARE ENDED
+          |--------------------------------------------------------------------------
+          */
+
+          videoTrack.onended =
+            () => {
+
+              if (
+                recorder.state !==
+                "inactive"
+              ) {
+
+                recorder.stop();
+              }
+
+            };
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | STORE RECORDER
+          |--------------------------------------------------------------------------
+          */
+
+          mediaRecorderRef.current =
+            recorder;
+
+
+          /*
+          |--------------------------------------------------------------------------
+          | START
+          |--------------------------------------------------------------------------
+          */
+
+          recorder.start(
+            250,
+          );
+
+          setRecording(
+            true,
+          );
+
+        } catch (
+          error
+        ) {
+
+          console.error(
+            "Recording failed:",
+            error,
+          );
+
+          cleanupRecording();
+
+          setRecording(
+            false,
+          );
+
+        }
+
+      },
+      [
+        recording,
+        recordingMode,
+        audioStarted,
+        selectedInstrument,
+        cleanupRecording,
+      ],
+    );
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | STOP RECORDING
+  |--------------------------------------------------------------------------
+  */
+
+  const stopRecording =
+    useCallback(() => {
+
+      const recorder =
+        mediaRecorderRef.current;
+
+      if (!recorder) {
+
+        cleanupRecording();
+
+        setRecording(
+          false,
+        );
+
+        return;
+      }
+
+      if (
+        recorder.state !==
+        "inactive"
+      ) {
+
+        recorder.stop();
+
+      } else {
+
+        cleanupRecording();
+
+        setRecording(
+          false,
+        );
+
+      }
+
+    }, [
+      cleanupRecording,
+    ]);
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | RECORDING UNMOUNT CLEANUP
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+
+    return () => {
+
+      const recorder =
+        mediaRecorderRef.current;
+
+      if (
+        recorder &&
+        recorder.state !==
+        "inactive"
+      ) {
+
+        recorder.stop();
+      }
+
+      cleanupRecording();
+
+    };
+
+  }, [
+    cleanupRecording,
+  ]);
+
 
   /*
   |--------------------------------------------------------------------------
@@ -849,7 +2118,10 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const waveActive = audioStarted && notes.length > 0;
+  const waveActive =
+    audioStarted &&
+    notes.length > 0;
+
 
   /*
   |--------------------------------------------------------------------------
@@ -878,6 +2150,7 @@ function App() {
           "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
+
       {/* ========================================================== */}
       {/* FULLSCREEN CAMERA */}
       {/* ========================================================== */}
@@ -906,6 +2179,7 @@ function App() {
           padding: 0,
         }}
       >
+
         <style>
           {`
             .camera-fullscreen,
@@ -938,8 +2212,13 @@ function App() {
           `}
         </style>
 
-        <CameraView onResults={handleResults} trackingResult={trackingResult} />
+        <CameraView
+          onResults={handleResults}
+          trackingResult={trackingResult}
+        />
+
       </div>
+
 
       {/* ========================================================== */}
       {/* CAMERA OVERLAY */}
@@ -959,6 +2238,7 @@ function App() {
             "linear-gradient(to bottom, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.08) 35%, rgba(0,0,0,0.12) 58%, rgba(0,0,0,0.88) 100%)",
         }}
       />
+
 
       {/* ========================================================== */}
       {/* TOP LEFT CONTROL BAR */}
@@ -984,81 +2264,314 @@ function App() {
 
           borderRadius: "14px",
 
-          background: "rgba(10,10,10,0.70)",
+          background:
+            "rgba(10,10,10,0.70)",
 
-          border: "1px solid rgba(255,255,255,0.10)",
+          border:
+            "1px solid rgba(255,255,255,0.10)",
 
-          backdropFilter: "blur(22px)",
+          backdropFilter:
+            "blur(22px)",
 
-          WebkitBackdropFilter: "blur(22px)",
+          WebkitBackdropFilter:
+            "blur(22px)",
 
-          boxShadow: "0 12px 45px rgba(0,0,0,0.35)",
+          boxShadow:
+            "0 12px 45px rgba(0,0,0,0.35)",
         }}
       >
-        {/* ======================================================== */}
+
         {/* KEY */}
-        {/* ======================================================== */}
 
         <InstrumentSelect
           label="KEY"
           value={effectiveKey}
-          options={[
-            "C",
-            "C#",
-            "D",
-            "D#",
-            "E",
-            "F",
-            "F#",
-            "G",
-            "G#",
-            "A",
-            "A#",
-            "B",
-          ]}
-          onChange={handleKeyChange}
+          options={KEY_NAMES}
+          onChange={
+            handleKeyChange
+          }
         />
 
-        {/* ======================================================== */}
+
         {/* SCALE */}
-        {/* ======================================================== */}
 
         <InstrumentSelect
           label="SCALE"
           value={selectedScale}
-          options={["MAJOR", "MINOR"]}
-          onChange={setSelectedScale}
+          options={Object.keys(
+            SCALE_INTERVALS,
+          )}
+          onChange={value => {
+
+            if (
+              value in
+              SCALE_INTERVALS
+            ) {
+
+              setSelectedScale(
+                value as ScaleName,
+              );
+
+            }
+
+          }}
         />
 
-        {/* ======================================================== */}
+
         {/* INSTRUMENT */}
-        {/* ======================================================== */}
 
         <InstrumentSelect
           label="INSTRUMENT"
           value={selectedInstrument}
-          options={["ORGAN", "RHODES"]}
-          onChange={(value) => setSelectedInstrument(value as InstrumentType)}
+          options={[
+            "ORGAN",
+            "RHODES",
+          ]}
+          onChange={value =>
+            setSelectedInstrument(
+              value as InstrumentType,
+            )
+          }
         />
 
-        {/* ======================================================== */}
+
         {/* TRANSPOSE */}
-        {/* ======================================================== */}
 
         <TransposeSelector
-          value={transposeSemitones}
-          enabled={transposeEnabled}
-          onChange={setTransposeSemitones}
+          value={
+            transposeSemitones
+          }
+          enabled={
+            transposeEnabled
+          }
+          onChange={
+            setTransposeSemitones
+          }
         />
 
-        {/* ======================================================== */}
+
+        {/* RECORDING */}
+
+        <div
+          style={{
+            display: "flex",
+
+            alignItems: "center",
+
+            gap: "5px",
+
+            marginLeft: "3px",
+
+            padding: "4px 6px",
+
+            borderRadius: "10px",
+
+            background:
+              recording
+                ? "rgba(255,60,80,0.12)"
+                : "rgba(255,255,255,0.045)",
+          }}
+        >
+
+          <span
+            style={{
+              marginLeft: "3px",
+
+              marginRight: "3px",
+
+              fontSize: "8px",
+
+              fontWeight: 700,
+
+              letterSpacing: "0.12em",
+
+              opacity:
+                recording
+                  ? 0.75
+                  : 0.35,
+
+              whiteSpace:
+                "nowrap",
+            }}
+          >
+            REC
+          </span>
+
+
+          {!recording && (
+            <select
+              value={
+                recordingMode
+              }
+              onChange={event =>
+                setRecordingMode(
+                  event.target
+                    .value as RecordingMode,
+                )
+              }
+              aria-label="Recording mode"
+              style={{
+                appearance:
+                  "none",
+
+                WebkitAppearance:
+                  "none",
+
+                border: "none",
+
+                outline: "none",
+
+                background:
+                  "transparent",
+
+                color: "#fff",
+
+                fontFamily:
+                  "inherit",
+
+                fontSize: "11px",
+
+                fontWeight: 600,
+
+                cursor:
+                  "pointer",
+
+                padding:
+                  "2px 3px",
+
+                maxWidth:
+                  "105px",
+              }}
+            >
+
+              <option
+                value="SCREEN"
+                style={{
+                  background:
+                    "#161616",
+
+                  color: "#fff",
+                }}
+              >
+                SCREEN
+              </option>
+
+              <option
+                value="SCREEN_MIC"
+                style={{
+                  background:
+                    "#161616",
+
+                  color: "#fff",
+                }}
+              >
+                SCREEN + MIC
+              </option>
+
+            </select>
+          )}
+
+
+          {!recording ? (
+
+            <button
+              type="button"
+              onClick={
+                startRecording
+              }
+              aria-label="Start recording"
+              style={{
+                width: "24px",
+
+                height: "24px",
+
+                border: "none",
+
+                borderRadius: "7px",
+
+                background:
+                  "rgba(255,255,255,0.08)",
+
+                color: "#fff",
+
+                cursor:
+                  "pointer",
+
+                display: "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                fontSize: "10px",
+
+                fontWeight: 700,
+
+                flexShrink: 0,
+              }}
+            >
+              ●
+            </button>
+
+          ) : (
+
+            <button
+              type="button"
+              onClick={
+                stopRecording
+              }
+              aria-label="Stop recording"
+              style={{
+                width: "24px",
+
+                height: "24px",
+
+                border: "none",
+
+                borderRadius: "7px",
+
+                background:
+                  "rgba(255,60,80,0.20)",
+
+                color:
+                  "#ff6678",
+
+                cursor:
+                  "pointer",
+
+                display: "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "center",
+
+                fontSize: "11px",
+
+                fontWeight: 700,
+
+                flexShrink: 0,
+              }}
+            >
+              ■
+            </button>
+
+          )}
+
+        </div>
+
+
         {/* GUIDE */}
-        {/* ======================================================== */}
 
         <button
           type="button"
           aria-label="Open guide"
-          onClick={() => setGuideOpen(true)}
+          onClick={() =>
+            setGuideOpen(true)
+          }
           style={{
             width: "30px",
 
@@ -1068,17 +2581,22 @@ function App() {
 
             display: "flex",
 
-            alignItems: "center",
+            alignItems:
+              "center",
 
-            justifyContent: "center",
+            justifyContent:
+              "center",
 
             borderRadius: "9px",
 
-            border: "1px solid rgba(255,255,255,0.08)",
+            border:
+              "1px solid rgba(255,255,255,0.08)",
 
-            background: "rgba(255,255,255,0.055)",
+            background:
+              "rgba(255,255,255,0.055)",
 
-            color: "rgba(255,255,255,0.75)",
+            color:
+              "rgba(255,255,255,0.75)",
 
             fontSize: "14px",
 
@@ -1089,10 +2607,12 @@ function App() {
         >
           ?
         </button>
+
       </div>
 
+
       {/* ========================================================== */}
-      {/* TOP RIGHT VOLUME METER */}
+      {/* TOP RIGHT VOLUME */}
       {/* ========================================================== */}
 
       <div
@@ -1121,19 +2641,26 @@ function App() {
 
           borderRadius: "14px",
 
-          background: "rgba(10,10,10,0.78)",
+          background:
+            "rgba(10,10,10,0.78)",
 
-          border: "1px solid rgba(255,255,255,0.12)",
+          border:
+            "1px solid rgba(255,255,255,0.12)",
 
-          backdropFilter: "blur(22px)",
+          backdropFilter:
+            "blur(22px)",
 
-          WebkitBackdropFilter: "blur(22px)",
+          WebkitBackdropFilter:
+            "blur(22px)",
 
-          boxShadow: "0 12px 45px rgba(0,0,0,0.40)",
+          boxShadow:
+            "0 12px 45px rgba(0,0,0,0.40)",
 
-          pointerEvents: "none",
+          pointerEvents:
+            "none",
         }}
       >
+
         <span
           style={{
             fontSize: "10px",
@@ -1144,11 +2671,13 @@ function App() {
 
             opacity: 0.48,
 
-            whiteSpace: "nowrap",
+            whiteSpace:
+              "nowrap",
           }}
         >
           VOLUME
         </span>
+
 
         <div
           style={{
@@ -1158,29 +2687,42 @@ function App() {
 
             height: "10px",
 
-            borderRadius: "999px",
+            borderRadius:
+              "999px",
 
-            overflow: "hidden",
+            overflow:
+              "hidden",
 
-            background: "rgba(255,255,255,0.12)",
+            background:
+              "rgba(255,255,255,0.12)",
 
-            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.05)",
+            boxShadow:
+              "inset 0 0 0 1px rgba(255,255,255,0.05)",
           }}
         >
+
           <div
             style={{
-              width: `${Math.round(volume * 100)}%`,
+              width:
+                `${Math.round(
+                  volume * 100,
+                )}%`,
 
               height: "100%",
 
-              borderRadius: "999px",
+              borderRadius:
+                "999px",
 
-              background: "rgba(255,255,255,0.90)",
+              background:
+                "rgba(255,255,255,0.90)",
 
-              transition: "width 45ms linear",
+              transition:
+                "width 45ms linear",
             }}
           />
+
         </div>
+
 
         <span
           style={{
@@ -1190,16 +2732,22 @@ function App() {
 
             fontWeight: 650,
 
-            fontVariantNumeric: "tabular-nums",
+            fontVariantNumeric:
+              "tabular-nums",
 
             textAlign: "right",
 
             opacity: 0.68,
           }}
         >
-          {Math.round(volume * 100)}%
+          {Math.round(
+            volume * 100,
+          )}
+          %
         </span>
+
       </div>
+
 
       {/* ========================================================== */}
       {/* CHORD */}
@@ -1219,35 +2767,50 @@ function App() {
 
           display: "flex",
 
-          flexDirection: "column",
+          flexDirection:
+            "column",
 
-          alignItems: "center",
+          alignItems:
+            "center",
 
-          justifyContent: "flex-end",
+          justifyContent:
+            "flex-end",
 
-          pointerEvents: "none",
+          pointerEvents:
+            "none",
 
-          textAlign: "center",
+          textAlign:
+            "center",
 
           padding: "20px",
 
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
         }}
       >
+
         {!audioStarted ? (
+
           <button
             type="button"
-            onClick={startAudio}
+            onClick={
+              startAudio
+            }
             style={{
-              pointerEvents: "auto",
+              pointerEvents:
+                "auto",
 
-              padding: "14px 28px",
+              padding:
+                "14px 28px",
 
-              borderRadius: "999px",
+              borderRadius:
+                "999px",
 
-              border: "1px solid rgba(255,255,255,0.16)",
+              border:
+                "1px solid rgba(255,255,255,0.16)",
 
-              background: "rgba(255,255,255,0.10)",
+              background:
+                "rgba(255,255,255,0.10)",
 
               color: "#fff",
 
@@ -1255,91 +2818,134 @@ function App() {
 
               fontWeight: 600,
 
-              cursor: "pointer",
+              cursor:
+                "pointer",
 
-              backdropFilter: "blur(18px)",
+              backdropFilter:
+                "blur(18px)",
 
-              WebkitBackdropFilter: "blur(18px)",
+              WebkitBackdropFilter:
+                "blur(18px)",
 
-              boxShadow: "0 15px 45px rgba(0,0,0,0.30)",
+              boxShadow:
+                "0 15px 45px rgba(0,0,0,0.30)",
             }}
           >
             Start Instrument
           </button>
+
         ) : (
+
           <>
+
             <div
               style={{
-                fontSize: "clamp(42px, 7vw, 82px)",
+                fontSize:
+                  "clamp(42px, 7vw, 82px)",
 
-                lineHeight: 0.9,
+                lineHeight:
+                  0.9,
 
                 fontWeight: 700,
 
-                letterSpacing: "-0.06em",
+                letterSpacing:
+                  "-0.06em",
 
-                whiteSpace: "nowrap",
+                whiteSpace:
+                  "nowrap",
 
-                textShadow: "0 5px 45px rgba(0,0,0,0.65)",
+                textShadow:
+                  "0 5px 45px rgba(0,0,0,0.65)",
               }}
             >
               {chordName}
             </div>
 
+
             <div
               style={{
-                marginTop: "8px",
+                marginTop:
+                  "8px",
 
-                fontSize: "11px",
+                fontSize:
+                  "11px",
 
                 fontWeight: 600,
 
-                letterSpacing: "0.14em",
+                letterSpacing:
+                  "0.14em",
 
-                opacity: transposeEnabled ? 0.55 : 0.3,
+                opacity:
+                  transposeEnabled
+                    ? 0.55
+                    : 0.3,
               }}
             >
               KEY {effectiveKey}
               {" · "}
-              {transposeEnabled ? "TRANSPOSE ON" : "TRANSPOSE OFF"}
+              {transposeEnabled
+                ? "TRANSPOSE ON"
+                : "TRANSPOSE OFF"}
             </div>
+
 
             <div
               style={{
-                marginTop: "9px",
+                marginTop:
+                  "9px",
 
-                fontSize: "15px",
+                fontSize:
+                  "15px",
 
                 fontWeight: 500,
 
-                letterSpacing: "0.16em",
+                letterSpacing:
+                  "0.16em",
 
-                opacity: leftGesture ? 0.62 : 0.2,
+                opacity:
+                  leftGesture
+                    ? 0.62
+                    : 0.2,
               }}
             >
-              {leftGesture?.degree ?? "—"}
+              {leftGesture?.degree ??
+                "—"}
             </div>
+
 
             <div
               style={{
-                marginTop: "9px",
+                marginTop:
+                  "9px",
 
-                minHeight: "18px",
+                minHeight:
+                  "18px",
 
-                fontSize: "11px",
+                fontSize:
+                  "11px",
 
                 fontWeight: 500,
 
-                letterSpacing: "0.14em",
+                letterSpacing:
+                  "0.14em",
 
-                opacity: notes.length > 0 ? 0.48 : 0.14,
+                opacity:
+                  notes.length > 0
+                    ? 0.48
+                    : 0.14,
               }}
             >
-              {notes.length > 0 ? notes.join("   ") : "—"}
+              {notes.length > 0
+                ? notes.join("   ")
+                : "—"}
             </div>
+
           </>
+
         )}
+
       </div>
+
 
       {/* ========================================================== */}
       {/* WAVEFORM */}
@@ -1359,24 +2965,42 @@ function App() {
 
           zIndex: 6,
 
-          pointerEvents: "none",
+          pointerEvents:
+            "none",
 
-          opacity: waveActive ? 0.95 : 0.28,
+          opacity:
+            waveActive
+              ? 0.95
+              : 0.28,
 
-          overflow: "hidden",
+          overflow:
+            "hidden",
         }}
       >
-        <Waveform active={waveActive} />
+        <Waveform
+          active={
+            waveActive
+          }
+        />
       </div>
+
 
       {/* ========================================================== */}
       {/* GUIDE */}
       {/* ========================================================== */}
 
-      {guideOpen && <Guide onClose={() => setGuideOpen(false)} />}
+      {guideOpen && (
+        <Guide
+          onClose={() =>
+            setGuideOpen(false)
+          }
+        />
+      )}
+
     </main>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1396,33 +3020,43 @@ function InstrumentSelect({
 
   options: string[];
 
-  onChange: (value: string) => void;
+  onChange:
+    (value: string) => void;
 }) {
+
   return (
     <label
       style={{
         display: "flex",
 
-        alignItems: "center",
+        alignItems:
+          "center",
 
         gap: "7px",
 
-        padding: "7px 9px",
+        padding:
+          "7px 9px",
 
-        borderRadius: "9px",
+        borderRadius:
+          "9px",
 
-        cursor: "pointer",
+        cursor:
+          "pointer",
 
-        whiteSpace: "nowrap",
+        whiteSpace:
+          "nowrap",
       }}
     >
+
       <span
         style={{
-          fontSize: "8px",
+          fontSize:
+            "8px",
 
           fontWeight: 700,
 
-          letterSpacing: "0.12em",
+          letterSpacing:
+            "0.12em",
 
           opacity: 0.35,
         }}
@@ -1430,50 +3064,67 @@ function InstrumentSelect({
         {label}
       </span>
 
+
       <select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={event =>
+          onChange(
+            event.target.value,
+          )
+        }
         style={{
-          appearance: "none",
+          appearance:
+            "none",
 
-          WebkitAppearance: "none",
+          WebkitAppearance:
+            "none",
 
           border: "none",
 
           outline: "none",
 
-          background: "transparent",
+          background:
+            "transparent",
 
           color: "#fff",
 
-          fontFamily: "inherit",
+          fontFamily:
+            "inherit",
 
           fontSize: "12px",
 
           fontWeight: 600,
 
-          cursor: "pointer",
+          cursor:
+            "pointer",
 
           padding: 0,
         }}
       >
-        {options.map((option) => (
-          <option
-            key={option}
-            value={option}
-            style={{
-              background: "#161616",
 
-              color: "#fff",
-            }}
-          >
-            {option}
-          </option>
-        ))}
+        {options.map(
+          option => (
+            <option
+              key={option}
+              value={option}
+              style={{
+                background:
+                  "#161616",
+
+                color: "#fff",
+              }}
+            >
+              {option}
+            </option>
+          ),
+        )}
+
       </select>
+
     </label>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1490,58 +3141,96 @@ function TransposeSelector({
 
   enabled: boolean;
 
-  onChange: (value: number) => void;
+  onChange:
+    (value: number) => void;
 }) {
-  const decrease = () => {
-    onChange(Math.max(-12, value - 1));
-  };
 
-  const increase = () => {
-    onChange(Math.min(12, value + 1));
-  };
+  const decrease =
+    () => {
+
+      onChange(
+        Math.max(
+          -12,
+          value - 1,
+        ),
+      );
+
+    };
+
+
+  const increase =
+    () => {
+
+      onChange(
+        Math.min(
+          12,
+          value + 1,
+        ),
+      );
+
+    };
+
 
   return (
     <div
       style={{
         display: "flex",
 
-        alignItems: "center",
+        alignItems:
+          "center",
 
         gap: "5px",
 
-        padding: "4px 6px",
+        padding:
+          "4px 6px",
 
-        borderRadius: "10px",
+        borderRadius:
+          "10px",
 
-        background: enabled
-          ? "rgba(255,255,255,0.09)"
-          : "rgba(255,255,255,0.045)",
+        background:
+          enabled
+            ? "rgba(255,255,255,0.09)"
+            : "rgba(255,255,255,0.045)",
       }}
     >
+
       <span
         style={{
-          marginLeft: "3px",
+          marginLeft:
+            "3px",
 
-          marginRight: "3px",
+          marginRight:
+            "3px",
 
-          fontSize: "8px",
+          fontSize:
+            "8px",
 
           fontWeight: 700,
 
-          letterSpacing: "0.12em",
+          letterSpacing:
+            "0.12em",
 
-          opacity: enabled ? 0.6 : 0.35,
+          opacity:
+            enabled
+              ? 0.6
+              : 0.35,
 
-          whiteSpace: "nowrap",
+          whiteSpace:
+            "nowrap",
         }}
       >
         TRANSPOSE
       </span>
 
+
       <button
         type="button"
-        onClick={decrease}
-        disabled={value <= -12}
+        onClick={
+          decrease
+        }
+        disabled={
+          value <= -12
+        }
         style={{
           width: "22px",
 
@@ -1549,17 +3238,27 @@ function TransposeSelector({
 
           border: "none",
 
-          borderRadius: "6px",
+          borderRadius:
+            "6px",
 
-          background: "rgba(255,255,255,0.06)",
+          background:
+            "rgba(255,255,255,0.06)",
 
-          color: "rgba(255,255,255,0.75)",
+          color:
+            "rgba(255,255,255,0.75)",
 
-          cursor: value <= -12 ? "default" : "pointer",
+          cursor:
+            value <= -12
+              ? "default"
+              : "pointer",
 
-          opacity: value <= -12 ? 0.25 : 1,
+          opacity:
+            value <= -12
+              ? 0.25
+              : 1,
 
-          fontSize: "15px",
+          fontSize:
+            "15px",
 
           lineHeight: 1,
         }}
@@ -1567,68 +3266,107 @@ function TransposeSelector({
         −
       </button>
 
+
       <select
         value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
+        onChange={event =>
+          onChange(
+            Number(
+              event.target.value,
+            ),
+          )
+        }
         aria-label="Transpose amount"
         style={{
-          appearance: "none",
+          appearance:
+            "none",
 
-          WebkitAppearance: "none",
+          WebkitAppearance:
+            "none",
 
-          minWidth: "38px",
+          minWidth:
+            "38px",
 
-          padding: "2px 0",
+          padding:
+            "2px 0",
 
           border: "none",
 
           outline: "none",
 
-          background: "transparent",
+          background:
+            "transparent",
 
-          color: enabled ? "#fff" : "rgba(255,255,255,0.55)",
+          color:
+            enabled
+              ? "#fff"
+              : "rgba(255,255,255,0.55)",
 
-          fontFamily: "inherit",
+          fontFamily:
+            "inherit",
 
-          fontSize: "12px",
+          fontSize:
+            "12px",
 
-          fontWeight: 650,
+          fontWeight:
+            650,
 
-          textAlign: "center",
+          textAlign:
+            "center",
 
-          cursor: "pointer",
+          cursor:
+            "pointer",
         }}
       >
+
         {Array.from(
           {
             length: 25,
           },
           (_, index) => {
-            const transpose = index - 12;
 
-            const label = transpose > 0 ? `+${transpose}` : `${transpose}`;
+            const transpose =
+              index - 12;
+
+            const label =
+              transpose > 0
+                ? `+${transpose}`
+                : `${transpose}`;
 
             return (
               <option
-                key={transpose}
-                value={transpose}
+                key={
+                  transpose
+                }
+                value={
+                  transpose
+                }
                 style={{
-                  background: "#161616",
+                  background:
+                    "#161616",
 
-                  color: "#fff",
+                  color:
+                    "#fff",
                 }}
               >
                 {label}
               </option>
             );
+
           },
         )}
+
       </select>
+
 
       <button
         type="button"
-        onClick={increase}
-        disabled={value >= 12}
+        onClick={
+          increase
+        }
+        disabled={
+          value >= 12
+        }
         style={{
           width: "22px",
 
@@ -1636,26 +3374,38 @@ function TransposeSelector({
 
           border: "none",
 
-          borderRadius: "6px",
+          borderRadius:
+            "6px",
 
-          background: "rgba(255,255,255,0.06)",
+          background:
+            "rgba(255,255,255,0.06)",
 
-          color: "rgba(255,255,255,0.75)",
+          color:
+            "rgba(255,255,255,0.75)",
 
-          cursor: value >= 12 ? "default" : "pointer",
+          cursor:
+            value >= 12
+              ? "default"
+              : "pointer",
 
-          opacity: value >= 12 ? 0.25 : 1,
+          opacity:
+            value >= 12
+              ? 0.25
+              : 1,
 
-          fontSize: "15px",
+          fontSize:
+            "15px",
 
           lineHeight: 1,
         }}
       >
         +
       </button>
+
     </div>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1663,7 +3413,12 @@ function TransposeSelector({
 |--------------------------------------------------------------------------
 */
 
-function Guide({ onClose }: { onClose: () => void }) {
+function Guide({
+  onClose,
+}: {
+  onClose: () => void;
+}) {
+
   return (
     <div
       style={{
@@ -1675,61 +3430,88 @@ function Guide({ onClose }: { onClose: () => void }) {
 
         display: "flex",
 
-        alignItems: "center",
+        alignItems:
+          "center",
 
-        justifyContent: "center",
+        justifyContent:
+          "center",
 
         padding: "20px",
 
-        background: "rgba(0,0,0,0.62)",
+        background:
+          "rgba(0,0,0,0.62)",
 
-        backdropFilter: "blur(20px)",
+        backdropFilter:
+          "blur(20px)",
 
-        WebkitBackdropFilter: "blur(20px)",
+        WebkitBackdropFilter:
+          "blur(20px)",
       }}
-      onClick={onClose}
+      onClick={
+        onClose
+      }
     >
+
       <section
-        onClick={(event) => event.stopPropagation()}
+        onClick={event =>
+          event.stopPropagation()
+        }
         style={{
-          width: "min(520px, 100%)",
+          width:
+            "min(520px, 100%)",
 
-          maxHeight: "90vh",
+          maxHeight:
+            "90vh",
 
-          overflowY: "auto",
+          overflowY:
+            "auto",
 
-          boxSizing: "border-box",
+          boxSizing:
+            "border-box",
 
-          padding: "28px",
+          padding:
+            "28px",
 
-          borderRadius: "22px",
+          borderRadius:
+            "22px",
 
-          background: "rgba(18,18,18,0.94)",
+          background:
+            "rgba(18,18,18,0.94)",
 
-          border: "1px solid rgba(255,255,255,0.10)",
+          border:
+            "1px solid rgba(255,255,255,0.10)",
 
-          boxShadow: "0 30px 100px rgba(0,0,0,0.55)",
+          boxShadow:
+            "0 30px 100px rgba(0,0,0,0.55)",
         }}
       >
+
         <div
           style={{
             display: "flex",
 
-            alignItems: "center",
+            alignItems:
+              "center",
 
-            justifyContent: "space-between",
+            justifyContent:
+              "space-between",
 
-            marginBottom: "25px",
+            marginBottom:
+              "25px",
           }}
         >
+
           <div>
+
             <div
               style={{
-                fontSize: "22px",
+                fontSize:
+                  "22px",
 
                 fontWeight: 700,
 
-                letterSpacing: "-0.03em",
+                letterSpacing:
+                  "-0.03em",
               }}
             >
               Gesture Guide
@@ -1737,115 +3519,218 @@ function Guide({ onClose }: { onClose: () => void }) {
 
             <div
               style={{
-                marginTop: "5px",
+                marginTop:
+                  "5px",
 
-                fontSize: "12px",
+                fontSize:
+                  "12px",
 
                 opacity: 0.4,
               }}
             >
               Shape the chord with your hands.
             </div>
+
           </div>
+
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={
+              onClose
+            }
             style={{
-              width: "32px",
+              width:
+                "32px",
 
-              height: "32px",
+              height:
+                "32px",
 
-              borderRadius: "50%",
+              borderRadius:
+                "50%",
 
-              border: "1px solid rgba(255,255,255,0.10)",
+              border:
+                "1px solid rgba(255,255,255,0.10)",
 
-              background: "rgba(255,255,255,0.05)",
+              background:
+                "rgba(255,255,255,0.05)",
 
-              color: "#fff",
+              color:
+                "#fff",
 
-              cursor: "pointer",
+              cursor:
+                "pointer",
 
-              fontSize: "16px",
+              fontSize:
+                "16px",
             }}
           >
             ×
           </button>
+
         </div>
+
 
         <GuideSection
           title="Left hand · chord"
           rows={[
             ["Index", "I"],
             ["Index + Middle", "II"],
-            ["Index + Middle + Ring", "III"],
-            ["Four fingers", "IV"],
-            ["Five fingers", "V"],
-            ["Index + Pinky", "VI"],
-            ["Thumb + Index + Pinky", "VII"],
+            [
+              "Index + Middle + Ring",
+              "III",
+            ],
+            [
+              "Four fingers",
+              "IV",
+            ],
+            [
+              "Five fingers",
+              "V",
+            ],
+            [
+              "Index + Pinky",
+              "VI",
+            ],
+            [
+              "Thumb + Index + Pinky",
+              "VII",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Left-hand tilt"
           rows={[
-            ["Inward", "Minor"],
-            ["Outward", "Major"],
+            [
+              "Inward",
+              "Minor",
+            ],
+            [
+              "Outward",
+              "Major",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Right hand · shape"
           rows={[
-            ["1 finger", "Root"],
-            ["2 fingers", "Inversion"],
-            ["3 fingers", "Seventh"],
-            ["4 fingers", "Dominant / Diminished"],
+            [
+              "1 finger",
+              "Root",
+            ],
+            [
+              "2 fingers",
+              "Inversion",
+            ],
+            [
+              "3 fingers",
+              "Seventh",
+            ],
+            [
+              "4 fingers",
+              "Dominant / Diminished",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Chord semitone"
           rows={[
-            ["Index + Pinky", "Activate"],
-            ["Inward", "−1"],
-            ["Neutral", "0"],
-            ["Outward", "+1"],
+            [
+              "Index + Pinky",
+              "Activate",
+            ],
+            [
+              "Inward",
+              "−1",
+            ],
+            [
+              "Neutral",
+              "0",
+            ],
+            [
+              "Outward",
+              "+1",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Transpose switch"
           rows={[
-            ["Thumb alone", "Toggle ON / OFF"],
-            ["Transpose amount", "Selected from menu"],
-            ["Gesture direction", "Ignored"],
-            ["Hold gesture", "No repeat"],
-            ["Release", "Re-arm switch"],
+            [
+              "Thumb alone",
+              "Toggle ON / OFF",
+            ],
+            [
+              "Transpose amount",
+              "Selected from menu",
+            ],
+            [
+              "Gesture direction",
+              "Ignored",
+            ],
+            [
+              "Hold gesture",
+              "No repeat",
+            ],
+            [
+              "Release",
+              "Re-arm switch",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Instrument"
           rows={[
-            ["Organ", "Synthesized drawbar organ"],
-            ["Rhodes", "Electric piano"],
-            ["Instrument menu", "Switch sound"],
+            [
+              "Organ",
+              "Synthesized drawbar organ",
+            ],
+            [
+              "Rhodes",
+              "Electric piano",
+            ],
+            [
+              "Instrument menu",
+              "Switch sound",
+            ],
           ]}
         />
+
 
         <GuideSection
           title="Other controls"
           rows={[
-            ["Thumb", "Lower octave"],
-            ["Right hand height", "Volume"],
-            ["Transpose menu", "−12 → +12"],
+            [
+              "Thumb",
+              "Lower octave",
+            ],
+            [
+              "Right hand height",
+              "Volume",
+            ],
+            [
+              "Transpose menu",
+              "−12 → +12",
+            ],
           ]}
         />
+
       </section>
+
     </div>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1861,23 +3746,30 @@ function GuideSection({
 
   rows: [string, string][];
 }) {
+
   return (
     <div
       style={{
-        marginTop: "22px",
+        marginTop:
+          "22px",
       }}
     >
+
       <div
         style={{
-          marginBottom: "9px",
+          marginBottom:
+            "9px",
 
-          fontSize: "10px",
+          fontSize:
+            "10px",
 
           fontWeight: 700,
 
-          letterSpacing: "0.14em",
+          letterSpacing:
+            "0.14em",
 
-          textTransform: "uppercase",
+          textTransform:
+            "uppercase",
 
           opacity: 0.35,
         }}
@@ -1885,47 +3777,65 @@ function GuideSection({
         {title}
       </div>
 
+
       <div>
-        {rows.map((row, index) => (
-          <div
-            key={`${row[0]}-${index}`}
-            style={{
-              display: "flex",
 
-              alignItems: "center",
-
-              justifyContent: "space-between",
-
-              padding: "9px 0",
-
-              borderBottom: "1px solid rgba(255,255,255,0.055)",
-
-              fontSize: "13px",
-            }}
-          >
-            <span
+        {rows.map(
+          (row, index) => (
+            <div
+              key={`${row[0]}-${index}`}
               style={{
-                opacity: 0.65,
+                display: "flex",
+
+                alignItems:
+                  "center",
+
+                justifyContent:
+                  "space-between",
+
+                padding:
+                  "9px 0",
+
+                borderBottom:
+                  "1px solid rgba(255,255,255,0.055)",
+
+                fontSize:
+                  "13px",
               }}
             >
-              {row[0]}
-            </span>
 
-            <span
-              style={{
-                fontWeight: 600,
+              <span
+                style={{
+                  opacity:
+                    0.65,
+                }}
+              >
+                {row[0]}
+              </span>
 
-                opacity: 0.9,
-              }}
-            >
-              {row[1]}
-            </span>
-          </div>
-        ))}
+
+              <span
+                style={{
+                  fontWeight:
+                    600,
+
+                  opacity:
+                    0.9,
+                }}
+              >
+                {row[1]}
+              </span>
+
+            </div>
+          ),
+        )}
+
       </div>
+
     </div>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -1933,82 +3843,205 @@ function GuideSection({
 |--------------------------------------------------------------------------
 */
 
-function Waveform({ active }: { active: boolean }) {
-  const [phase, setPhase] = useState(0);
+function Waveform({
+  active,
+}: {
+  active: boolean;
+}) {
+
+  const [
+    phase,
+    setPhase,
+  ] = useState(0);
+
 
   useEffect(() => {
-    let frame: number;
 
-    let last = performance.now();
+    let frame:
+      number;
 
-    const animate = (now: number) => {
-      const delta = now - last;
+    let last =
+      performance.now();
 
-      last = now;
 
-      setPhase((previous) => previous + delta * (active ? 0.0038 : 0.00055));
+    const animate =
+      (
+        now: number,
+      ) => {
 
-      frame = requestAnimationFrame(animate);
-    };
+        const delta =
+          now - last;
 
-    frame = requestAnimationFrame(animate);
+        last =
+          now;
+
+        setPhase(
+          previous =>
+            previous +
+            delta *
+              (
+                active
+                  ? 0.0038
+                  : 0.00055
+              ),
+        );
+
+        frame =
+          requestAnimationFrame(
+            animate,
+          );
+
+      };
+
+
+    frame =
+      requestAnimationFrame(
+        animate,
+      );
+
 
     return () => {
-      cancelAnimationFrame(frame);
+
+      cancelAnimationFrame(
+        frame,
+      );
+
     };
-  }, [active]);
 
-  const pointCount = 360;
+  }, [
+    active,
+  ]);
 
-  const violetPoints: string[] = [];
 
-  const redPoints: string[] = [];
+  const pointCount =
+    360;
 
-  for (let index = 0; index < pointCount; index++) {
-    const x = (index / (pointCount - 1)) * 100;
+  const violetPoints:
+    string[] = [];
 
-    const t = index / (pointCount - 1);
+  const redPoints:
+    string[] = [];
 
-    const edgeFade = Math.sin(Math.PI * t);
 
-    const edgeCurve = edgeFade * edgeFade;
+  for (
+    let index = 0;
+    index < pointCount;
+    index++
+  ) {
 
-    const current = Math.sin(index * 0.075 + phase);
+    const x =
+      (
+        index /
+        (pointCount - 1)
+      ) * 100;
 
-    const current2 = Math.sin(index * 0.145 - phase * 0.72);
+    const t =
+      index /
+      (pointCount - 1);
 
-    const current3 = Math.sin(index * 0.03 + phase * 0.42);
+    const edgeFade =
+      Math.sin(
+        Math.PI * t,
+      );
 
-    const interaction = Math.sin(index * 0.052 + phase * 0.82);
+    const edgeCurve =
+      edgeFade *
+      edgeFade;
 
-    const turbulence = Math.sin(index * 0.19 - phase * 1.15);
+    const current =
+      Math.sin(
+        index * 0.075 +
+        phase,
+      );
 
-    const sharedFlow = current * 8 + current2 * 4.5 + current3 * 3;
+    const current2 =
+      Math.sin(
+        index * 0.145 -
+        phase * 0.72,
+      );
 
-    const baseSeparation = 12 + interaction * 8 + turbulence * 2.5;
+    const current3 =
+      Math.sin(
+        index * 0.03 +
+        phase * 0.42,
+      );
 
-    const separation = baseSeparation * edgeCurve;
+    const interaction =
+      Math.sin(
+        index * 0.052 +
+        phase * 0.82,
+      );
 
-    const ripple = Math.sin(index * 0.31 + phase * 1.55) * 2.4 * edgeFade;
+    const turbulence =
+      Math.sin(
+        index * 0.19 -
+        phase * 1.15,
+      );
 
-    const center = 55 + sharedFlow;
+    const sharedFlow =
+      current * 8 +
+      current2 * 4.5 +
+      current3 * 3;
 
-    const violetInteraction = interaction * 3.5 * edgeCurve;
+    const baseSeparation =
+      12 +
+      interaction * 8 +
+      turbulence * 2.5;
 
-    const redInteraction = interaction * -3.5 * edgeCurve;
+    const separation =
+      baseSeparation *
+      edgeCurve;
 
-    const violetY = center - separation / 2 + ripple + violetInteraction;
+    const ripple =
+      Math.sin(
+        index * 0.31 +
+        phase * 1.55,
+      ) *
+      2.4 *
+      edgeFade;
 
-    const redY = center + separation / 2 - ripple + redInteraction;
+    const center =
+      55 +
+      sharedFlow;
 
-    violetPoints.push(`${x},${violetY}`);
+    const violetInteraction =
+      interaction *
+      3.5 *
+      edgeCurve;
 
-    redPoints.push(`${x},${redY}`);
+    const redInteraction =
+      interaction *
+      -3.5 *
+      edgeCurve;
+
+    const violetY =
+      center -
+      separation / 2 +
+      ripple +
+      violetInteraction;
+
+    const redY =
+      center +
+      separation / 2 -
+      ripple +
+      redInteraction;
+
+    violetPoints.push(
+      `${x},${violetY}`,
+    );
+
+    redPoints.push(
+      `${x},${redY}`,
+    );
   }
 
-  const violetPath = violetPoints.join(" ");
 
-  const redPath = redPoints.join(" ");
+  const violetPath =
+    violetPoints.join(" ");
+
+  const redPath =
+    redPoints.join(" ");
+
 
   return (
     <svg
@@ -2024,52 +4057,161 @@ function Waveform({ active }: { active: boolean }) {
         overflow: "visible",
       }}
     >
+
       <defs>
-        <linearGradient id="coupledVioletGradient" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#6A00FF" stopOpacity="0" />
 
-          <stop offset="10%" stopColor="#8A2BE2" stopOpacity="0.70" />
+        <linearGradient
+          id="coupledVioletGradient"
+          x1="0"
+          y1="0"
+          x2="1"
+          y2="0"
+        >
 
-          <stop offset="28%" stopColor="#B84DFF" stopOpacity="0.95" />
+          <stop
+            offset="0%"
+            stopColor="#6A00FF"
+            stopOpacity="0"
+          />
 
-          <stop offset="50%" stopColor="#E58AFF" stopOpacity="1" />
+          <stop
+            offset="10%"
+            stopColor="#8A2BE2"
+            stopOpacity="0.70"
+          />
 
-          <stop offset="72%" stopColor="#B84DFF" stopOpacity="0.95" />
+          <stop
+            offset="28%"
+            stopColor="#B84DFF"
+            stopOpacity="0.95"
+          />
 
-          <stop offset="90%" stopColor="#8A2BE2" stopOpacity="0.70" />
+          <stop
+            offset="50%"
+            stopColor="#E58AFF"
+            stopOpacity="1"
+          />
 
-          <stop offset="100%" stopColor="#6A00FF" stopOpacity="0" />
+          <stop
+            offset="72%"
+            stopColor="#B84DFF"
+            stopOpacity="0.95"
+          />
+
+          <stop
+            offset="90%"
+            stopColor="#8A2BE2"
+            stopOpacity="0.70"
+          />
+
+          <stop
+            offset="100%"
+            stopColor="#6A00FF"
+            stopOpacity="0"
+          />
+
         </linearGradient>
 
-        <linearGradient id="coupledRedGradient" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#FF003C" stopOpacity="0" />
 
-          <stop offset="10%" stopColor="#FF174F" stopOpacity="0.70" />
+        <linearGradient
+          id="coupledRedGradient"
+          x1="0"
+          y1="0"
+          x2="1"
+          y2="0"
+        >
 
-          <stop offset="28%" stopColor="#FF3D67" stopOpacity="0.95" />
+          <stop
+            offset="0%"
+            stopColor="#FF003C"
+            stopOpacity="0"
+          />
 
-          <stop offset="50%" stopColor="#FF8197" stopOpacity="1" />
+          <stop
+            offset="10%"
+            stopColor="#FF174F"
+            stopOpacity="0.70"
+          />
 
-          <stop offset="72%" stopColor="#FF3D67" stopOpacity="0.95" />
+          <stop
+            offset="28%"
+            stopColor="#FF3D67"
+            stopOpacity="0.95"
+          />
 
-          <stop offset="90%" stopColor="#FF174F" stopOpacity="0.70" />
+          <stop
+            offset="50%"
+            stopColor="#FF8197"
+            stopOpacity="1"
+          />
 
-          <stop offset="100%" stopColor="#FF003C" stopOpacity="0" />
+          <stop
+            offset="72%"
+            stopColor="#FF3D67"
+            stopOpacity="0.95"
+          />
+
+          <stop
+            offset="90%"
+            stopColor="#FF174F"
+            stopOpacity="0.70"
+          />
+
+          <stop
+            offset="100%"
+            stopColor="#FF003C"
+            stopOpacity="0"
+          />
+
         </linearGradient>
 
-        <linearGradient id="coupledCurrentGradient" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#7A00FF" stopOpacity="0" />
 
-          <stop offset="22%" stopColor="#A33CFF" stopOpacity="0.45" />
+        <linearGradient
+          id="coupledCurrentGradient"
+          x1="0"
+          y1="0"
+          x2="1"
+          y2="0"
+        >
 
-          <stop offset="42%" stopColor="#D44DFF" stopOpacity="0.75" />
+          <stop
+            offset="0%"
+            stopColor="#7A00FF"
+            stopOpacity="0"
+          />
 
-          <stop offset="56%" stopColor="#FF3D5A" stopOpacity="0.75" />
+          <stop
+            offset="22%"
+            stopColor="#A33CFF"
+            stopOpacity="0.45"
+          />
 
-          <stop offset="78%" stopColor="#FF174F" stopOpacity="0.45" />
+          <stop
+            offset="42%"
+            stopColor="#D44DFF"
+            stopOpacity="0.75"
+          />
 
-          <stop offset="100%" stopColor="#FF003C" stopOpacity="0" />
+          <stop
+            offset="56%"
+            stopColor="#FF3D5A"
+            stopOpacity="0.75"
+          />
+
+          <stop
+            offset="78%"
+            stopColor="#FF174F"
+            stopOpacity="0.45"
+          />
+
+          <stop
+            offset="100%"
+            stopColor="#FF003C"
+            stopOpacity="0"
+          />
+
         </linearGradient>
+
 
         <filter
           id="coupledVioletGlow"
@@ -2078,14 +4220,26 @@ function Waveform({ active }: { active: boolean }) {
           width="160%"
           height="400%"
         >
-          <feGaussianBlur stdDeviation="2.2" result="blur" />
+
+          <feGaussianBlur
+            stdDeviation="2.2"
+            result="blur"
+          />
 
           <feMerge>
-            <feMergeNode in="blur" />
 
-            <feMergeNode in="SourceGraphic" />
+            <feMergeNode
+              in="blur"
+            />
+
+            <feMergeNode
+              in="SourceGraphic"
+            />
+
           </feMerge>
+
         </filter>
+
 
         <filter
           id="coupledRedGlow"
@@ -2094,14 +4248,26 @@ function Waveform({ active }: { active: boolean }) {
           width="160%"
           height="400%"
         >
-          <feGaussianBlur stdDeviation="2.2" result="blur" />
+
+          <feGaussianBlur
+            stdDeviation="2.2"
+            result="blur"
+          />
 
           <feMerge>
-            <feMergeNode in="blur" />
 
-            <feMergeNode in="SourceGraphic" />
+            <feMergeNode
+              in="blur"
+            />
+
+            <feMergeNode
+              in="SourceGraphic"
+            />
+
           </feMerge>
+
         </filter>
+
 
         <filter
           id="coupledCurrentGlow"
@@ -2110,9 +4276,15 @@ function Waveform({ active }: { active: boolean }) {
           width="160%"
           height="400%"
         >
-          <feGaussianBlur stdDeviation="4" />
+
+          <feGaussianBlur
+            stdDeviation="4"
+          />
+
         </filter>
+
       </defs>
+
 
       <polyline
         points={violetPath}
@@ -2121,10 +4293,15 @@ function Waveform({ active }: { active: boolean }) {
         strokeWidth="10"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.14 : 0.025}
+        opacity={
+          active
+            ? 0.14
+            : 0.025
+        }
         filter="url(#coupledCurrentGlow)"
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={violetPath}
@@ -2133,10 +4310,15 @@ function Waveform({ active }: { active: boolean }) {
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.2 : 0.035}
+        opacity={
+          active
+            ? 0.2
+            : 0.035
+        }
         filter="url(#coupledVioletGlow)"
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={redPath}
@@ -2145,59 +4327,101 @@ function Waveform({ active }: { active: boolean }) {
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.2 : 0.035}
+        opacity={
+          active
+            ? 0.2
+            : 0.035
+        }
         filter="url(#coupledRedGlow)"
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={violetPath}
         fill="none"
         stroke="url(#coupledVioletGradient)"
-        strokeWidth={active ? 3.2 : 1.5}
+        strokeWidth={
+          active
+            ? 3.2
+            : 1.5
+        }
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.96 : 0.18}
+        opacity={
+          active
+            ? 0.96
+            : 0.18
+        }
         filter="url(#coupledVioletGlow)"
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={redPath}
         fill="none"
         stroke="url(#coupledRedGradient)"
-        strokeWidth={active ? 3.2 : 1.5}
+        strokeWidth={
+          active
+            ? 3.2
+            : 1.5
+        }
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.96 : 0.18}
+        opacity={
+          active
+            ? 0.96
+            : 0.18
+        }
         filter="url(#coupledRedGlow)"
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={violetPath}
         fill="none"
         stroke="#E0A0FF"
-        strokeWidth={active ? 0.95 : 0.4}
+        strokeWidth={
+          active
+            ? 0.95
+            : 0.4
+        }
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.92 : 0.1}
+        opacity={
+          active
+            ? 0.92
+            : 0.1
+        }
         vectorEffect="non-scaling-stroke"
       />
+
 
       <polyline
         points={redPath}
         fill="none"
         stroke="#FF8095"
-        strokeWidth={active ? 0.95 : 0.4}
+        strokeWidth={
+          active
+            ? 0.95
+            : 0.4
+        }
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={active ? 0.92 : 0.1}
+        opacity={
+          active
+            ? 0.92
+            : 0.1
+        }
         vectorEffect="non-scaling-stroke"
       />
+
     </svg>
   );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2206,6 +4430,7 @@ function Waveform({ active }: { active: boolean }) {
 */
 
 interface ChordBuildInput {
+
   degree: string;
 
   quality: ChordQuality;
@@ -2214,14 +4439,16 @@ interface ChordBuildInput {
 
   key: string;
 
-  scale: string;
+  scale: ScaleName;
 
   chordSemitone: number;
 
   transpose: number;
 
   octaveOffset: number;
+
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2229,24 +4456,64 @@ interface ChordBuildInput {
 |--------------------------------------------------------------------------
 */
 
-function generateChordNotes(input: ChordBuildInput): string[] {
-  const keyOffset = KEY_OFFSETS[input.key];
+function generateChordNotes(
+  input: ChordBuildInput,
+): string[] {
 
-  if (keyOffset === undefined) {
+  const keyOffset =
+    KEY_OFFSETS[
+      input.key
+    ];
+
+  if (
+    keyOffset ===
+    undefined
+  ) {
     return [];
   }
 
-  const scale = SCALE_INTERVALS[input.scale];
+
+  const scale =
+    SCALE_INTERVALS[
+      input.scale
+    ];
 
   if (!scale) {
     return [];
   }
 
-  const degreeOffset = scale[input.degree];
 
-  if (degreeOffset === undefined) {
+  /*
+  |--------------------------------------------------------------------------
+  | DEGREE → SCALE INDEX
+  |--------------------------------------------------------------------------
+  */
+
+  const degreeIndex =
+    SCALE_DEGREE_INDEX[
+      input.degree
+    ];
+
+  if (
+    degreeIndex ===
+    undefined
+  ) {
     return [];
   }
+
+
+  const degreeOffset =
+    scale[
+      degreeIndex
+    ];
+
+  if (
+    degreeOffset ===
+    undefined
+  ) {
+    return [];
+  }
+
 
   /*
   |--------------------------------------------------------------------------
@@ -2254,7 +4521,11 @@ function generateChordNotes(input: ChordBuildInput): string[] {
   |--------------------------------------------------------------------------
   */
 
-  let root = 60 + keyOffset + degreeOffset;
+  let root =
+    60 +
+    keyOffset +
+    degreeOffset;
+
 
   /*
   |--------------------------------------------------------------------------
@@ -2262,25 +4533,41 @@ function generateChordNotes(input: ChordBuildInput): string[] {
   |--------------------------------------------------------------------------
   */
 
-  root += input.chordSemitone;
+  root +=
+    input.chordSemitone;
+
 
   /*
   |--------------------------------------------------------------------------
   | TRANSPOSE
   |--------------------------------------------------------------------------
+  |
+  | Independent from octave.
+  |
+  |--------------------------------------------------------------------------
   */
 
-  root += input.transpose;
+  root +=
+    input.transpose;
+
 
   /*
   |--------------------------------------------------------------------------
   | OCTAVE
   |--------------------------------------------------------------------------
+  |
+  | Independent from transpose.
+  |
+  |--------------------------------------------------------------------------
   */
 
-  root += input.octaveOffset;
+  root +=
+    input.octaveOffset;
 
-  let intervals: number[];
+
+  let intervals:
+    number[];
+
 
   /*
   |--------------------------------------------------------------------------
@@ -2288,33 +4575,70 @@ function generateChordNotes(input: ChordBuildInput): string[] {
   |--------------------------------------------------------------------------
   */
 
-  if (input.shape === "ROOT") {
-    intervals = input.quality === "MINOR" ? [0, 3, 7] : [0, 4, 7];
-  } else if (input.shape === "INVERSION") {
+  if (
+    input.shape ===
+    "ROOT"
+  ) {
+
+    intervals =
+      input.quality ===
+      "MINOR"
+        ? [0, 3, 7]
+        : [0, 4, 7];
+
 
   /*
   |--------------------------------------------------------------------------
   | INVERSION
   |--------------------------------------------------------------------------
   */
-    intervals = input.quality === "MINOR" ? [3, 7, 12] : [4, 7, 12];
-  } else if (input.shape === "SEVENTH") {
+
+  } else if (
+    input.shape ===
+    "INVERSION"
+  ) {
+
+    intervals =
+      input.quality ===
+      "MINOR"
+        ? [3, 7, 12]
+        : [4, 7, 12];
+
 
   /*
   |--------------------------------------------------------------------------
   | SEVENTH
   |--------------------------------------------------------------------------
   */
-    intervals = input.quality === "MINOR" ? [0, 3, 7, 10] : [0, 4, 7, 11];
-  } else {
+
+  } else if (
+    input.shape ===
+    "SEVENTH"
+  ) {
+
+    intervals =
+      input.quality ===
+      "MINOR"
+        ? [0, 3, 7, 10]
+        : [0, 4, 7, 11];
+
 
   /*
   |--------------------------------------------------------------------------
   | DOMINANT / DIMINISHED
   |--------------------------------------------------------------------------
   */
-    intervals = input.quality === "MINOR" ? [0, 3, 6, 9] : [0, 4, 7, 10];
+
+  } else {
+
+    intervals =
+      input.quality ===
+      "MINOR"
+        ? [0, 3, 6, 9]
+        : [0, 4, 7, 10];
+
   }
+
 
   /*
   |--------------------------------------------------------------------------
@@ -2322,8 +4646,15 @@ function generateChordNotes(input: ChordBuildInput): string[] {
   |--------------------------------------------------------------------------
   */
 
-  return intervals.map((interval) => midiToNote(root + interval));
+  return intervals.map(
+    interval =>
+      midiToNote(
+        root +
+        interval,
+      ),
+  );
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2331,15 +4662,34 @@ function generateChordNotes(input: ChordBuildInput): string[] {
 |--------------------------------------------------------------------------
 */
 
-function midiToNote(midi: number): string {
-  const safeMidi = Math.max(0, Math.min(127, Math.round(midi)));
+function midiToNote(
+  midi: number,
+): string {
 
-  const note = KEY_NAMES[safeMidi % 12];
+  const safeMidi =
+    Math.max(
+      0,
+      Math.min(
+        127,
+        Math.round(
+          midi,
+        ),
+      ),
+    );
 
-  const octave = Math.floor(safeMidi / 12) - 1;
+  const note =
+    KEY_NAMES[
+      safeMidi % 12
+    ];
+
+  const octave =
+    Math.floor(
+      safeMidi / 12,
+    ) - 1;
 
   return `${note}${octave}`;
 }
+
 
 /*
 |--------------------------------------------------------------------------
@@ -2347,11 +4697,26 @@ function midiToNote(midi: number): string {
 |--------------------------------------------------------------------------
 */
 
-function midiToNoteName(midi: number): string {
-  const safeMidi = Math.max(0, Math.min(127, Math.round(midi)));
+function midiToNoteName(
+  midi: number,
+): string {
 
-  return KEY_NAMES[safeMidi % 12];
+  const safeMidi =
+    Math.max(
+      0,
+      Math.min(
+        127,
+        Math.round(
+          midi,
+        ),
+      ),
+    );
+
+  return KEY_NAMES[
+    safeMidi % 12
+  ];
 }
+
 
 /*
 |--------------------------------------------------------------------------
