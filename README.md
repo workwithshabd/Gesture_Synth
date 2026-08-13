@@ -10,95 +10,107 @@ keyboard or physical MIDI controller.
 
 ## Features
 
--   **Real-time hand-controlled chords**
-    -   Left-hand finger combinations select scale degrees.
-    -   Left-hand tilt selects major or minor quality.
-    -   Right-hand finger combinations select chord shapes.
--   **Chord shaping**
-    -   Root triads
-    -   Inversions
-    -   Seventh chords
-    -   Dominant / diminished shapes
-    -   ±1 semitone chord movement
--   **Transpose control**
-    -   Select a transpose amount from **−12 to +12 semitones**.
-    -   A dedicated thumb gesture toggles transpose **ON/OFF**.
-    -   The gesture acts as a switch rather than continuously changing
-        the transpose amount.
--   **Octave control**
-    -   Right-hand gestures can shift the instrument by an octave.
--   **Gesture-controlled volume**
-    -   Right-hand wrist height controls volume.
-    -   With no right hand detected, the instrument returns to the
-        default volume.
--   **Visual feedback**
-    -   Fullscreen camera view
-    -   Current chord and notes
-    -   Key, scale, and transpose state
-    -   Animated coupled violet/red waveform
-    -   Built-in gesture guide
--   **Web Audio playback**
-    -   Chords are generated as MIDI-style note values and passed to the
-        audio engine for playback.
+- **Real-time hand-controlled chords**
+  - Left-hand finger combinations select scale degrees.
+  - Left-hand tilt selects major or minor quality.
+  - Right-hand finger combinations select chord shapes.
+- **Chord shaping**
+  - Root triads
+  - Inversions
+  - Seventh chords
+  - Dominant / diminished shapes
+  - ±1 semitone chord movement
+- **Transpose control**
+  - Select a transpose amount from **−12 to +12 semitones**.
+  - A dedicated thumb gesture toggles transpose **ON/OFF**.
+  - The gesture acts as a switch rather than continuously changing
+    the transpose amount.
+- **Octave control**
+  - Right-hand gestures can shift the instrument by an octave.
+- **Gesture-controlled volume**
+  - Right-hand wrist height controls volume.
+  - With no right hand detected, the instrument returns to the
+    default volume.
+- **Visual feedback**
+  - Fullscreen camera view
+  - Current chord and notes
+  - Key, scale, and transpose state
+  - Animated coupled violet/red waveform
+  - Built-in gesture guide
+- **Web Audio playback**
+  - Chords are generated as MIDI-style note values and passed to the
+    audio engine for playback.
 
 ## Gesture Map
 
 ### Left hand --- chord degree
 
-  Gesture                 Degree
-  ----------------------- --------
-  Index                   I
-  Index + Middle          II
-  Index + Middle + Ring   III
-  Four fingers            IV
-  Five fingers            V
-  Index + Pinky           VI
-  Thumb + Index + Pinky   VII
+Gesture Degree
+
+---
+
+Index I
+Index + Middle II
+Index + Middle + Ring III
+Four fingers IV
+Five fingers V
+Index + Pinky VI
+Thumb + Index + Pinky VII
 
 ### Left-hand tilt
 
-  Tilt      Chord quality
-  --------- ---------------
-  Inward    Minor
-  Outward   Major
+Tilt Chord quality
+
+---
+
+Inward Minor
+Outward Major
 
 ### Right hand --- chord shape
 
-  Fingers   Shape
-  --------- -----------------------
-  1         Root
-  2         Inversion
-  3         Seventh
-  4         Dominant / Diminished
+Fingers Shape
+
+---
+
+1 Root
+2 Inversion
+3 Seventh
+4 Dominant / Diminished
 
 ### Chord semitone control
 
 The **Index + Pinky** gesture activates semitone control.
 
-  Palm direction          Result
-  ---------------- -------------
-  Inward             −1 semitone
-  Neutral                      0
-  Outward            +1 semitone
+Palm direction Result
+
+---
+
+Inward −1 semitone
+Neutral 0
+Outward +1 semitone
 
 ### Transpose switch
 
-  Gesture       Action
-  ------------- -------------------------
-  Thumb alone   Toggle transpose ON/OFF
-  Hold          No repeated toggles
-  Release       Re-arm the switch
+Gesture Action
+
+---
+
+Thumb alone Toggle transpose ON/OFF
+Hold No repeated toggles
+Release Re-arm the switch
 
 The transpose gesture does **not** determine the transpose amount. The
 amount is selected independently from the transpose control.
 
 ### Other controls
 
-  Control              Function
-  -------------------- ----------------------
-  Right-hand height    Volume
-  Octave gesture       ±1 octave
-  Transpose selector   −12 to +12 semitones
+Control Function
+
+---
+
+Right-hand height Volume
+Octave gesture ±1 octave
+Transpose selector −12 to +12 semitones
 
 ## Musical Model
 
@@ -108,7 +120,7 @@ controls.
 
 Conceptually:
 
-``` text
+```text
 Selected Key
      ↓
 Selected Scale
@@ -134,14 +146,14 @@ Audio Engine
 
 Currently the application defines:
 
--   Major
--   Minor
+- Major
+- Minor
 
 ### Note generation
 
 The application uses the chromatic note set:
 
-``` text
+```text
 C  C#  D  D#  E  F  F#  G  G#  A  A#  B
 ```
 
@@ -153,8 +165,8 @@ names.
 
 The bottom of the interface contains two animated streams:
 
--   Violet
--   Red
+- Violet
+- Red
 
 They are intentionally coupled rather than being independent sine waves.
 Both streams share a common current field, with changing separation,
@@ -167,7 +179,7 @@ the same flowing current.
 
 The main application is organized around a few focused modules:
 
-``` text
+```text
 src/
 ├── App.tsx
 ├── audio/
@@ -187,7 +199,7 @@ src/
 
 Coordinates the application state and connects:
 
-``` text
+```text
 Camera
   ↓
 Hand Tracking
@@ -231,24 +243,24 @@ audio so it can comply with browser audio restrictions.
 
 ### Requirements
 
--   Node.js
--   npm
--   A modern browser with camera access
--   A working webcam
--   Permission to use the camera
+- Node.js
+- npm
+- A modern browser with camera access
+- A working webcam
+- Permission to use the camera
 
 ### Installation
 
 Clone the repository:
 
-``` bash
-git clone <your-repository-url>
-cd <your-project-directory>
+```bash
+gh repo clone workwithshabd/Gesture_Synth
+cd <Gesture_Synth >
 ```
 
 Install dependencies:
 
-``` bash
+```bash
 npm install
 ```
 
@@ -256,7 +268,7 @@ npm install
 
 Start the development server:
 
-``` bash
+```bash
 npm run dev
 ```
 
@@ -264,13 +276,13 @@ Open the local development URL shown by the terminal.
 
 ### Production build
 
-``` bash
+```bash
 npm run build
 ```
 
 Preview the production build:
 
-``` bash
+```bash
 npm run preview
 ```
 
@@ -279,15 +291,15 @@ npm run preview
 
 ## Using the Instrument
 
-1.  Open the application in a supported browser.
-2.  Allow camera access.
-3.  Click **Start Instrument** to initialize audio.
-4.  Select a key and scale.
-5.  Use the left hand to select a chord degree.
-6.  Tilt the left hand inward or outward to select minor or major.
-7.  Use the right hand to select the chord shape.
-8.  Use the semitone gesture when you want a ±1 semitone adjustment.
-9.  Adjust the transpose amount using the transpose selector.
+1. Open the application in a supported browser.
+2. Allow camera access.
+3. Click **Start Instrument** to initialize audio.
+4. Select a key and scale.
+5. Use the left hand to select a chord degree.
+6. Tilt the left hand inward or outward to select minor or major.
+7. Use the right hand to select the chord shape.
+8. Use the semitone gesture when you want a ±1 semitone adjustment.
+9. Adjust the transpose amount using the transpose selector.
 10. Use the thumb-alone gesture to toggle transpose.
 11. Move the right hand vertically to control volume.
 12. Use the **?** button for the in-app gesture reference.
@@ -300,7 +312,7 @@ Transpose is intentionally split into two independent controls.
 
 The transpose selector chooses the amount:
 
-``` text
+```text
 −12 ... −1
  0
 +1 ... +12
@@ -312,7 +324,7 @@ The thumb-alone gesture only toggles whether that amount is active.
 
 For example:
 
-``` text
+```text
 Key = C
 Transpose = +3
 
@@ -333,7 +345,7 @@ stabilization is therefore part of the control pipeline.
 The application also uses edge-triggered behaviour for the transpose
 gesture:
 
-``` text
+```text
 Gesture appears
      ↓
 Toggle once
@@ -354,8 +366,8 @@ state on every video frame.
 
 The application requires:
 
--   **Camera permission** for hand tracking.
--   **Audio interaction** initiated by the user before sound playback.
+- **Camera permission** for hand tracking.
+- **Audio interaction** initiated by the user before sound playback.
 
 If camera access is denied, hand-controlled interaction will not work.
 
@@ -368,12 +380,12 @@ Hand tracking and waveform rendering are both real-time workloads.
 
 For best results:
 
--   Use a modern desktop or laptop.
--   Keep the camera image reasonably well lit.
--   Avoid excessive background clutter.
--   Keep your hands clearly visible.
--   Avoid rapidly moving outside the camera frame.
--   Use a browser with hardware acceleration enabled where available.
+- Use a modern desktop or laptop.
+- Keep the camera image reasonably well lit.
+- Avoid excessive background clutter.
+- Keep your hands clearly visible.
+- Avoid rapidly moving outside the camera frame.
+- Use a browser with hardware acceleration enabled where available.
 
 The waveform uses `requestAnimationFrame` and dynamically generated SVG
 polylines. Gesture processing is driven by the incoming tracking
@@ -385,11 +397,11 @@ Gesture Synth is an experimental interactive musical instrument.
 
 The current implementation focuses on:
 
--   Reliable gesture-to-chord mapping
--   Stable real-time interaction
--   Low-friction musical controls
--   Visual feedback
--   Browser-based audio
+- Reliable gesture-to-chord mapping
+- Stable real-time interaction
+- Low-friction musical controls
+- Visual feedback
+- Browser-based audio
 
 The architecture is intentionally modular so additional gestures,
 scales, chord types, instruments, and visualizations can be added
@@ -399,18 +411,18 @@ without replacing the core interaction model.
 
 Potential future improvements:
 
--   Additional scales and modes
--   More chord qualities
--   Custom chord voicings
--   MIDI input/output
--   Multiple instruments
--   Preset management
--   Gesture sensitivity controls
--   Audio effects
--   Recording / looping
--   Better mobile camera support
--   Configurable gesture mappings
--   More advanced fluid/wave visualization
+- Additional scales and modes
+- More chord qualities
+- Custom chord voicings
+- MIDI input/output
+- Multiple instruments
+- Preset management
+- Gesture sensitivity controls
+- Audio effects
+- Recording / looping
+- Better mobile camera support
+- Configurable gesture mappings
+- More advanced fluid/wave visualization
 
 ## Contributing
 
@@ -418,13 +430,13 @@ Contributions are welcome.
 
 Before submitting a change:
 
-1.  Keep gesture behaviour deterministic.
-2.  Avoid introducing gesture conflicts.
-3.  Keep audio logic separate from UI logic.
-4.  Test with an actual camera rather than only synthetic landmark data.
-5.  Verify that changes do not cause repeated gesture triggers.
-6.  Run the project's type-check/build commands before opening a pull
-    request.
+1. Keep gesture behaviour deterministic.
+2. Avoid introducing gesture conflicts.
+3. Keep audio logic separate from UI logic.
+4. Test with an actual camera rather than only synthetic landmark data.
+5. Verify that changes do not cause repeated gesture triggers.
+6. Run the project's type-check/build commands before opening a pull
+   request.
 
 For larger changes, explain the interaction model and why the change is
 necessary.
@@ -435,7 +447,7 @@ Add the project's chosen license here.
 
 For example:
 
-``` text
+```text
 MIT License
 ```
 
