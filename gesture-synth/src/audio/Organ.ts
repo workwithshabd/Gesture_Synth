@@ -25,32 +25,22 @@
 
 import * as Tone from "tone";
 
-import type {
-  Instrument,
-} from "./Instrument";
+import type { Instrument } from "./Instrument";
 
-
-export class Organ
-  implements Instrument {
-
+export class Organ implements Instrument {
   /*
   |--------------------------------------------------------------------------
   | ORGAN VOICES
   |--------------------------------------------------------------------------
   */
 
-  private fundamental:
-    Tone.PolySynth;
+  private fundamental: Tone.PolySynth;
 
-  private fifth:
-    Tone.PolySynth;
+  private fifth: Tone.PolySynth;
 
-  private octave:
-    Tone.PolySynth;
+  private octave: Tone.PolySynth;
 
-  private upper:
-    Tone.PolySynth;
-
+  private upper: Tone.PolySynth;
 
   /*
   |--------------------------------------------------------------------------
@@ -58,9 +48,7 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private filter:
-    Tone.Filter;
-
+  private filter: Tone.Filter;
 
   /*
   |--------------------------------------------------------------------------
@@ -68,9 +56,7 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private chorus:
-    Tone.Chorus;
-
+  private chorus: Tone.Chorus;
 
   /*
   |--------------------------------------------------------------------------
@@ -78,9 +64,7 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private vibrato:
-    Tone.Vibrato;
-
+  private vibrato: Tone.Vibrato;
 
   /*
   |--------------------------------------------------------------------------
@@ -88,9 +72,7 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private reverb:
-    Tone.Reverb;
-
+  private reverb: Tone.Reverb;
 
   /*
   |--------------------------------------------------------------------------
@@ -98,9 +80,7 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private activeNotes:
-    string[] = [];
-
+  private activeNotes: string[] = [];
 
   /*
   |--------------------------------------------------------------------------
@@ -109,28 +89,21 @@ export class Organ
   */
 
   constructor() {
-
     /*
     |--------------------------------------------------------------------------
     | FILTER
     |--------------------------------------------------------------------------
     */
 
-    this.filter =
-      new Tone.Filter({
-        type:
-          "lowpass",
+    this.filter = new Tone.Filter({
+      type: "lowpass",
 
-        frequency:
-          5500,
+      frequency: 5500,
 
-        rolloff:
-          -12,
+      rolloff: -12,
 
-        Q:
-          0.5,
-      });
-
+      Q: 0.5,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -138,24 +111,17 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.chorus =
-      new Tone.Chorus({
-        frequency:
-          0.8,
+    this.chorus = new Tone.Chorus({
+      frequency: 0.8,
 
-        delayTime:
-          3.5,
+      delayTime: 3.5,
 
-        depth:
-          0.25,
+      depth: 0.25,
 
-        wet:
-          0.28,
-      });
-
+      wet: 0.28,
+    });
 
     this.chorus.start();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -163,18 +129,13 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.vibrato =
-      new Tone.Vibrato({
-        frequency:
-          5.5,
+    this.vibrato = new Tone.Vibrato({
+      frequency: 5.5,
 
-        depth:
-          0.025,
+      depth: 0.025,
 
-        wet:
-          0.15,
-      });
-
+      wet: 0.15,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -182,15 +143,11 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.reverb =
-      new Tone.Reverb({
-        decay:
-          2.2,
+    this.reverb = new Tone.Reverb({
+      decay: 2.2,
 
-        wet:
-          0.16,
-      });
-
+      wet: 0.16,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -198,31 +155,21 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.fundamental =
-      new Tone.PolySynth(
-        Tone.Synth,
-        {
-          oscillator: {
-            type:
-              "sine",
-          },
+    this.fundamental = new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: "sine",
+      },
 
-          envelope: {
-            attack:
-              0.015,
+      envelope: {
+        attack: 0.015,
 
-            decay:
-              0,
+        decay: 0,
 
-            sustain:
-              1,
+        sustain: 1,
 
-            release:
-              0.15,
-          },
-        }
-      );
-
+        release: 0.15,
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -234,31 +181,21 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.fifth =
-      new Tone.PolySynth(
-        Tone.Synth,
-        {
-          oscillator: {
-            type:
-              "sine",
-          },
+    this.fifth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: "sine",
+      },
 
-          envelope: {
-            attack:
-              0.015,
+      envelope: {
+        attack: 0.015,
 
-            decay:
-              0,
+        decay: 0,
 
-            sustain:
-              1,
+        sustain: 1,
 
-            release:
-              0.15,
-          },
-        }
-      );
-
+        release: 0.15,
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -266,31 +203,21 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.octave =
-      new Tone.PolySynth(
-        Tone.Synth,
-        {
-          oscillator: {
-            type:
-              "sine",
-          },
+    this.octave = new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: "sine",
+      },
 
-          envelope: {
-            attack:
-              0.015,
+      envelope: {
+        attack: 0.015,
 
-            decay:
-              0,
+        decay: 0,
 
-            sustain:
-              1,
+        sustain: 1,
 
-            release:
-              0.15,
-          },
-        }
-      );
-
+        release: 0.15,
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -298,31 +225,21 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.upper =
-      new Tone.PolySynth(
-        Tone.Synth,
-        {
-          oscillator: {
-            type:
-              "sine",
-          },
+    this.upper = new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: "sine",
+      },
 
-          envelope: {
-            attack:
-              0.01,
+      envelope: {
+        attack: 0.01,
 
-            decay:
-              0,
+        decay: 0,
 
-            sustain:
-              1,
+        sustain: 1,
 
-            release:
-              0.15,
-          },
-        }
-      );
-
+        release: 0.15,
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -330,18 +247,13 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.fundamental.volume.value =
-      -4;
+    this.fundamental.volume.value = -4;
 
-    this.fifth.volume.value =
-      -13;
+    this.fifth.volume.value = -13;
 
-    this.octave.volume.value =
-      -10;
+    this.octave.volume.value = -10;
 
-    this.upper.volume.value =
-      -18;
-
+    this.upper.volume.value = -18;
 
     /*
     |--------------------------------------------------------------------------
@@ -363,40 +275,20 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.fundamental
-      .connect(
-        this.filter
-      );
+    this.fundamental.connect(this.filter);
 
-    this.fifth
-      .connect(
-        this.filter
-      );
+    this.fifth.connect(this.filter);
 
-    this.octave
-      .connect(
-        this.filter
-      );
+    this.octave.connect(this.filter);
 
-    this.upper
-      .connect(
-        this.filter
-      );
+    this.upper.connect(this.filter);
 
     this.filter
-      .connect(
-        this.chorus
-      )
-      .connect(
-        this.vibrato
-      )
-      .connect(
-        this.reverb
-      )
+      .connect(this.chorus)
+      .connect(this.vibrato)
+      .connect(this.reverb)
       .toDestination();
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -404,18 +296,10 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  play(
-    notes: string[]
-  ): void {
-
-    if (
-      notes.length === 0
-    ) {
-
+  play(notes: string[]): void {
+    if (notes.length === 0) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -423,13 +307,7 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    const nextNotes =
-      Array.from(
-        new Set(
-          notes
-        )
-      ).sort();
-
+    const nextNotes = Array.from(new Set(notes)).sort();
 
     /*
     |--------------------------------------------------------------------------
@@ -437,9 +315,7 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    const currentNotes =
-      this.activeNotes;
-
+    const currentNotes = this.activeNotes;
 
     /*
     |--------------------------------------------------------------------------
@@ -447,14 +323,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    const notesToRelease =
-      currentNotes.filter(
-        note =>
-          !nextNotes.includes(
-            note
-          )
-      );
-
+    const notesToRelease = currentNotes.filter(
+      (note) => !nextNotes.includes(note),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -462,14 +333,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    const notesToAttack =
-      nextNotes.filter(
-        note =>
-          !currentNotes.includes(
-            note
-          )
-      );
-
+    const notesToAttack = nextNotes.filter(
+      (note) => !currentNotes.includes(note),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -477,15 +343,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToRelease.length === 0 &&
-      notesToAttack.length === 0
-    ) {
-
+    if (notesToRelease.length === 0 && notesToAttack.length === 0) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -493,16 +353,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToRelease.length > 0
-    ) {
-
-      this.releaseNotes(
-        notesToRelease
-      );
-
+    if (notesToRelease.length > 0) {
+      this.releaseNotes(notesToRelease);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -510,16 +363,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToAttack.length > 0
-    ) {
-
-      this.attackNotes(
-        notesToAttack
-      );
-
+    if (notesToAttack.length > 0) {
+      this.attackNotes(notesToAttack);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -527,11 +373,8 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.activeNotes =
-      nextNotes;
-
+    this.activeNotes = nextNotes;
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -539,21 +382,14 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private attackNotes(
-    notes: string[]
-  ): void {
-
+  private attackNotes(notes: string[]): void {
     /*
     |--------------------------------------------------------------------------
     | Fundamental
     |--------------------------------------------------------------------------
     */
 
-    this.fundamental
-      .triggerAttack(
-        notes
-      );
-
+    this.fundamental.triggerAttack(notes);
 
     /*
     |--------------------------------------------------------------------------
@@ -561,18 +397,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.fifth
-      .triggerAttack(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(7)
-              .toNote()
-        )
-      );
-
+    this.fifth.triggerAttack(
+      notes.map((note) => Tone.Frequency(note).transpose(7).toNote()),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -580,18 +407,9 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.octave
-      .triggerAttack(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(12)
-              .toNote()
-        )
-      );
-
+    this.octave.triggerAttack(
+      notes.map((note) => Tone.Frequency(note).transpose(12).toNote()),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -599,20 +417,10 @@ export class Organ
     |--------------------------------------------------------------------------
     */
 
-    this.upper
-      .triggerAttack(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(19)
-              .toNote()
-        )
-      );
-
+    this.upper.triggerAttack(
+      notes.map((note) => Tone.Frequency(note).transpose(19).toNote()),
+    );
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -620,56 +428,21 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  private releaseNotes(
-    notes: string[]
-  ): void {
+  private releaseNotes(notes: string[]): void {
+    this.fundamental.triggerRelease(notes);
 
-    this.fundamental
-      .triggerRelease(
-        notes
-      );
+    this.fifth.triggerRelease(
+      notes.map((note) => Tone.Frequency(note).transpose(7).toNote()),
+    );
 
+    this.octave.triggerRelease(
+      notes.map((note) => Tone.Frequency(note).transpose(12).toNote()),
+    );
 
-    this.fifth
-      .triggerRelease(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(7)
-              .toNote()
-        )
-      );
-
-
-    this.octave
-      .triggerRelease(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(12)
-              .toNote()
-        )
-      );
-
-
-    this.upper
-      .triggerRelease(
-        notes.map(
-          note =>
-            Tone.Frequency(
-              note
-            )
-              .transpose(19)
-              .toNote()
-        )
-      );
-
+    this.upper.triggerRelease(
+      notes.map((note) => Tone.Frequency(note).transpose(19).toNote()),
+    );
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -678,26 +451,14 @@ export class Organ
   */
 
   stop(): void {
-
-    if (
-      this.activeNotes.length === 0
-    ) {
-
+    if (this.activeNotes.length === 0) {
       return;
-
     }
 
+    this.releaseNotes(this.activeNotes);
 
-    this.releaseNotes(
-      this.activeNotes
-    );
-
-
-    this.activeNotes =
-      [];
-
+    this.activeNotes = [];
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -705,48 +466,19 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  setVolume(
-    value: number
-  ): void {
+  setVolume(value: number): void {
+    const safeValue = Math.max(0.001, Math.min(1, value));
 
-    const safeValue =
-      Math.max(
-        0.001,
-        Math.min(
-          1,
-          value
-        )
-      );
+    const db = Tone.gainToDb(safeValue);
 
+    this.fundamental.volume.rampTo(db - 4, 0.05);
 
-    const db =
-      Tone.gainToDb(
-        safeValue
-      );
+    this.fifth.volume.rampTo(db - 13, 0.05);
 
+    this.octave.volume.rampTo(db - 10, 0.05);
 
-    this.fundamental.volume.rampTo(
-      db - 4,
-      0.05
-    );
-
-    this.fifth.volume.rampTo(
-      db - 13,
-      0.05
-    );
-
-    this.octave.volume.rampTo(
-      db - 10,
-      0.05
-    );
-
-    this.upper.volume.rampTo(
-      db - 18,
-      0.05
-    );
-
+    this.upper.volume.rampTo(db - 18, 0.05);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -754,27 +486,11 @@ export class Organ
   |--------------------------------------------------------------------------
   */
 
-  setFilter(
-    frequency: number
-  ): void {
+  setFilter(frequency: number): void {
+    const safeFrequency = Math.max(200, Math.min(20000, frequency));
 
-    const safeFrequency =
-      Math.max(
-        200,
-        Math.min(
-          20000,
-          frequency
-        )
-      );
-
-
-    this.filter.frequency.rampTo(
-      safeFrequency,
-      0.08
-    );
-
+    this.filter.frequency.rampTo(safeFrequency, 0.08);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -783,9 +499,7 @@ export class Organ
   */
 
   dispose(): void {
-
     this.stop();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -794,7 +508,6 @@ export class Organ
     */
 
     this.chorus.stop();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -810,7 +523,6 @@ export class Organ
 
     this.upper.dispose();
 
-
     /*
     |--------------------------------------------------------------------------
     | Dispose effects
@@ -824,7 +536,5 @@ export class Organ
     this.vibrato.dispose();
 
     this.reverb.dispose();
-
   }
-
 }

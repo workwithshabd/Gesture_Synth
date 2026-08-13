@@ -1,14 +1,8 @@
-import {
-  ChordEngine,
-} from "./ChordEngine";
+import { ChordEngine } from "./ChordEngine";
 
-import {
-  VoicingEngine,
-} from "./VoicingEngine";
+import { VoicingEngine } from "./VoicingEngine";
 
-import {
-  TransposeEngine,
-} from "./TransposeEngine";
+import { TransposeEngine } from "./TransposeEngine";
 
 import type {
   ChordQuality,
@@ -50,22 +44,17 @@ export interface KeyTransposeResult {
 }
 
 export class MusicEngine {
-  private chordEngine =
-    new ChordEngine();
+  private chordEngine = new ChordEngine();
 
-  private voicingEngine =
-    new VoicingEngine();
+  private voicingEngine = new VoicingEngine();
 
-  private transposeEngine =
-    new TransposeEngine();
+  private transposeEngine = new TransposeEngine();
 
   /**
    * Build the chord from normal
    * left-hand and right-hand rules.
    */
-  buildChord(
-    input: BuildChordInput
-  ): GeneratedChord {
+  buildChord(input: BuildChordInput): GeneratedChord {
     const {
       key,
       scale,
@@ -81,12 +70,11 @@ export class MusicEngine {
      *
      * Scale degree → root.
      */
-    const originalRoot =
-      this.chordEngine.getScaleDegreeRoot(
-        key,
-        scale,
-        degree
-      );
+    const originalRoot = this.chordEngine.getScaleDegreeRoot(
+      key,
+      scale,
+      degree,
+    );
 
     /*
      * RIGHT HAND:
@@ -94,11 +82,10 @@ export class MusicEngine {
      * Finger count + left-hand quality
      * determine the chord quality.
      */
-    const quality =
-      this.chordEngine.getQualityFromRightHand(
-        leftQuality,
-        rightFingerCount
-      );
+    const quality = this.chordEngine.getQualityFromRightHand(
+      leftQuality,
+      rightFingerCount,
+    );
 
     /*
      * CHORD TRANSPOSE:
@@ -108,44 +95,28 @@ export class MusicEngine {
      * The special Thumb + Pinky gesture
      * can change this.
      */
-    const finalRoot =
-      this.transposeEngine.transposeRoot(
-        originalRoot,
-        chordTranspose
-      );
+    const finalRoot = this.transposeEngine.transposeRoot(
+      originalRoot,
+      chordTranspose,
+    );
 
     /*
      * Create the chord.
      */
-    let notes =
-      this.chordEngine.createChord(
-        finalRoot,
-        quality,
-        4
-      );
+    let notes = this.chordEngine.createChord(finalRoot, quality, 4);
 
     /*
      * RIGHT-HAND VOICING.
      */
     const voicing =
-      this.voicingEngine
-        .getVoicingFromFingerCount(
-          rightFingerCount
-        );
+      this.voicingEngine.getVoicingFromFingerCount(rightFingerCount);
 
-    const inversion =
-      this.voicingEngine.getInversion(
-        voicing
-      );
+    const inversion = this.voicingEngine.getInversion(voicing);
 
     /*
      * Apply inversion.
      */
-    notes =
-      this.voicingEngine.createInversion(
-        notes,
-        inversion
-      );
+    notes = this.voicingEngine.createInversion(notes, inversion);
 
     /*
      * Apply octave.
@@ -153,15 +124,8 @@ export class MusicEngine {
      * Only normal 1–4 finger
      * gestures get octave control.
      */
-    if (
-      rightFingerCount >= 1 &&
-      rightFingerCount <= 4
-    ) {
-      notes =
-        this.voicingEngine.applyOctave(
-          notes,
-          octaveDirection
-        );
+    if (rightFingerCount >= 1 && rightFingerCount <= 4) {
+      notes = this.voicingEngine.applyOctave(notes, octaveDirection);
     }
 
     return {
@@ -187,29 +151,25 @@ export class MusicEngine {
    */
   transposeCurrentChord(
     currentChord: GeneratedChord,
-    semitones: number
+    semitones: number,
   ): GeneratedChord {
-    const newRoot =
-      this.transposeEngine.transposeRoot(
-        currentChord.finalRoot,
-        semitones
-      );
+    const newRoot = this.transposeEngine.transposeRoot(
+      currentChord.finalRoot,
+      semitones,
+    );
 
-    const notes =
-      this.chordEngine.createChord(
-        newRoot,
-        currentChord.quality,
-        4
-      );
+    const notes = this.chordEngine.createChord(
+      newRoot,
+      currentChord.quality,
+      4,
+    );
 
     return {
-      originalRoot:
-        currentChord.originalRoot,
+      originalRoot: currentChord.originalRoot,
 
       finalRoot: newRoot,
 
-      quality:
-        currentChord.quality,
+      quality: currentChord.quality,
 
       notes,
     };
@@ -228,19 +188,14 @@ export class MusicEngine {
   transposeKey(
     currentChord: GeneratedChord,
     currentKey: RootNote,
-    semitones: number
+    semitones: number,
   ): KeyTransposeResult {
-    const newKey =
-      this.transposeEngine.transposeRoot(
-        currentKey,
-        semitones
-      );
+    const newKey = this.transposeEngine.transposeRoot(currentKey, semitones);
 
-    const newChordRoot =
-      this.transposeEngine.transposeRoot(
-        currentChord.finalRoot,
-        semitones
-      );
+    const newChordRoot = this.transposeEngine.transposeRoot(
+      currentChord.finalRoot,
+      semitones,
+    );
 
     /*
      * Rebuild the chord from the
@@ -248,25 +203,21 @@ export class MusicEngine {
      *
      * No inversion is applied.
      */
-    const notes =
-      this.chordEngine.createChord(
-        newChordRoot,
-        currentChord.quality,
-        4
-      );
+    const notes = this.chordEngine.createChord(
+      newChordRoot,
+      currentChord.quality,
+      4,
+    );
 
     return {
       newKey,
 
       chord: {
-        originalRoot:
-          currentChord.originalRoot,
+        originalRoot: currentChord.originalRoot,
 
-        finalRoot:
-          newChordRoot,
+        finalRoot: newChordRoot,
 
-        quality:
-          currentChord.quality,
+        quality: currentChord.quality,
 
         notes,
       },

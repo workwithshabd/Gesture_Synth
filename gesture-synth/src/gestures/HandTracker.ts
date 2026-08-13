@@ -24,10 +24,7 @@
 |--------------------------------------------------------------------------
 */
 
-import {
-  FilesetResolver,
-  HandLandmarker,
-} from "@mediapipe/tasks-vision";
+import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
 import type {
   HandLandmarks,
@@ -36,7 +33,6 @@ import type {
   Handedness,
 } from "./types";
 
-
 /*
 |--------------------------------------------------------------------------
 | TRACKING LOSS SETTINGS
@@ -44,7 +40,6 @@ import type {
 */
 
 const MAX_MISSING_FRAMES = 5;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -66,11 +61,9 @@ const MAX_MISSING_FRAMES = 5;
 |--------------------------------------------------------------------------
 */
 
-const MIN_HANDEDNESS_CONFIDENCE = 0.70;
+const MIN_HANDEDNESS_CONFIDENCE = 0.7;
 
-const MIN_HAND_LANDMARKS =
-  21;
-
+const MIN_HAND_LANDMARKS = 21;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,7 +92,6 @@ const MIN_PALM_LENGTH = 0.025;
 
 const MIN_PALM_WIDTH = 0.015;
 
-
 /*
 |--------------------------------------------------------------------------
 | TYPES
@@ -107,13 +99,10 @@ const MIN_PALM_WIDTH = 0.015;
 */
 
 interface HandLossState {
-
   missingFrames: number;
 
   lastDetectedAt: number;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -122,17 +111,13 @@ interface HandLossState {
 */
 
 export class HandTracker {
-
   /*
   |--------------------------------------------------------------------------
   | MEDIAPIPE
   |--------------------------------------------------------------------------
   */
 
-  private handLandmarker:
-    | HandLandmarker
-    | null = null;
-
+  private handLandmarker: HandLandmarker | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -140,10 +125,7 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private video:
-    | HTMLVideoElement
-    | null = null;
-
+  private video: HTMLVideoElement | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -151,12 +133,7 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private onResults:
-    | ((
-        result: HandTrackingResult
-      ) => void)
-    | null = null;
-
+  private onResults: ((result: HandTrackingResult) => void) | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -164,9 +141,7 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private running =
-    false;
-
+  private running = false;
 
   /*
   |--------------------------------------------------------------------------
@@ -174,10 +149,7 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private videoFrameCallbackId:
-    | number
-    | null = null;
-
+  private videoFrameCallbackId: number | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -185,10 +157,7 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private animationFrameId:
-    | number
-    | null = null;
-
+  private animationFrameId: number | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -196,17 +165,11 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private leftLoss:
-    HandLossState = {
+  private leftLoss: HandLossState = {
+    missingFrames: 0,
 
-    missingFrames:
-      0,
-
-    lastDetectedAt:
-      0,
-
+    lastDetectedAt: 0,
   };
-
 
   /*
   |--------------------------------------------------------------------------
@@ -214,17 +177,11 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private rightLoss:
-    HandLossState = {
+  private rightLoss: HandLossState = {
+    missingFrames: 0,
 
-    missingFrames:
-      0,
-
-    lastDetectedAt:
-      0,
-
+    lastDetectedAt: 0,
   };
-
 
   /*
   |--------------------------------------------------------------------------
@@ -233,44 +190,29 @@ export class HandTracker {
   */
 
   async initialize(): Promise<void> {
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm",
+    );
 
-    const vision =
-      await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-      );
+    this.handLandmarker = await HandLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
 
+        delegate: "GPU",
+      },
 
-    this.handLandmarker =
-      await HandLandmarker.createFromOptions(
-        vision,
-        {
+      runningMode: "VIDEO",
 
-          baseOptions: {
-
-            modelAssetPath:
-              "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-
-            delegate:
-              "GPU",
-
-          },
-
-
-          runningMode:
-            "VIDEO",
-
-
-          /*
+      /*
           |--------------------------------------------------------------------------
           | Maximum number of hands
           |--------------------------------------------------------------------------
           */
 
-          numHands:
-            2,
+      numHands: 2,
 
-
-          /*
+      /*
           |--------------------------------------------------------------------------
           | IMPORTANT:
           |
@@ -280,22 +222,13 @@ export class HandTracker {
           |--------------------------------------------------------------------------
           */
 
-          minHandDetectionConfidence:
-            0.70,
+      minHandDetectionConfidence: 0.7,
 
+      minHandPresenceConfidence: 0.65,
 
-          minHandPresenceConfidence:
-            0.65,
-
-
-          minTrackingConfidence:
-            0.65,
-
-        }
-      );
-
+      minTrackingConfidence: 0.65,
+    });
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -306,33 +239,17 @@ export class HandTracker {
   async start(
     video: HTMLVideoElement,
 
-    onResults: (
-      result: HandTrackingResult
-    ) => void
+    onResults: (result: HandTrackingResult) => void,
   ): Promise<void> {
-
-    if (
-      !this.handLandmarker
-    ) {
-
-      throw new Error(
-        "MediaPipe HandLandmarker has not been initialized."
-      );
-
+    if (!this.handLandmarker) {
+      throw new Error("MediaPipe HandLandmarker has not been initialized.");
     }
 
+    this.video = video;
 
-    this.video =
-      video;
+    this.onResults = onResults;
 
-
-    this.onResults =
-      onResults;
-
-
-    this.running =
-      true;
-
+    this.running = true;
 
     /*
     |--------------------------------------------------------------------------
@@ -341,26 +258,16 @@ export class HandTracker {
     */
 
     this.leftLoss = {
+      missingFrames: 0,
 
-      missingFrames:
-        0,
-
-      lastDetectedAt:
-        0,
-
+      lastDetectedAt: 0,
     };
-
 
     this.rightLoss = {
+      missingFrames: 0,
 
-      missingFrames:
-        0,
-
-      lastDetectedAt:
-        0,
-
+      lastDetectedAt: 0,
     };
-
 
     /*
     |--------------------------------------------------------------------------
@@ -369,9 +276,7 @@ export class HandTracker {
     */
 
     this.scheduleNextFrame();
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -387,42 +292,22 @@ export class HandTracker {
   */
 
   private scheduleNextFrame(): void {
-
-    if (
-      !this.running ||
-      !this.video
-    ) {
-
+    if (!this.running || !this.video) {
       return;
-
     }
 
+    const video = this.video;
 
-    const video =
-      this.video;
-
-
-    if (
-      "requestVideoFrameCallback" in video
-    ) {
-
-      this.videoFrameCallbackId =
-        video.requestVideoFrameCallback(
-          this.handleVideoFrame
-        );
-
-      return;
-
-    }
-
-
-    this.animationFrameId =
-      requestAnimationFrame(
-        this.handleAnimationFrame
+    if ("requestVideoFrameCallback" in video) {
+      this.videoFrameCallbackId = video.requestVideoFrameCallback(
+        this.handleVideoFrame,
       );
 
-  }
+      return;
+    }
 
+    this.animationFrameId = requestAnimationFrame(this.handleAnimationFrame);
+  }
 
   /*
   |--------------------------------------------------------------------------
@@ -430,27 +315,16 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private handleVideoFrame =
-    (
-      _now: number,
-      metadata: VideoFrameCallbackMetadata
-    ): void => {
+  private handleVideoFrame = (
+    _now: number,
+    metadata: VideoFrameCallbackMetadata,
+  ): void => {
+    if (!this.running) {
+      return;
+    }
 
-      if (
-        !this.running
-      ) {
-
-        return;
-
-      }
-
-
-      this.processFrame(
-        metadata.mediaTime * 1000
-      );
-
-    };
-
+    this.processFrame(metadata.mediaTime * 1000);
+  };
 
   /*
   |--------------------------------------------------------------------------
@@ -458,24 +332,13 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private handleAnimationFrame =
-    (now: number): void => {
+  private handleAnimationFrame = (now: number): void => {
+    if (!this.running) {
+      return;
+    }
 
-      if (
-        !this.running
-      ) {
-
-        return;
-
-      }
-
-
-      this.processFrame(
-        now
-      );
-
-    };
-
+    this.processFrame(now);
+  };
 
   /*
   |--------------------------------------------------------------------------
@@ -483,20 +346,10 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private processFrame(
-    timestamp: number
-  ): void {
-
-    if (
-      !this.running ||
-      !this.video ||
-      !this.handLandmarker
-    ) {
-
+  private processFrame(timestamp: number): void {
+    if (!this.running || !this.video || !this.handLandmarker) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -507,26 +360,15 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const detectionTimestamp =
-      performance.now();
-
+    const detectionTimestamp = performance.now();
 
     try {
+      const result = this.handLandmarker.detectForVideo(
+        this.video,
+        detectionTimestamp,
+      );
 
-      const result =
-        this.handLandmarker
-          .detectForVideo(
-            this.video,
-            detectionTimestamp
-          );
-
-
-      const trackingResult =
-        this.parseResults(
-          result,
-          timestamp
-        );
-
+      const trackingResult = this.parseResults(result, timestamp);
 
       /*
       |--------------------------------------------------------------------------
@@ -534,21 +376,10 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      this.onResults?.(
-        trackingResult
-      );
-
-    } catch (
-      error
-    ) {
-
-      console.error(
-        "MediaPipe detection error:",
-        error
-      );
-
+      this.onResults?.(trackingResult);
+    } catch (error) {
+      console.error("MediaPipe detection error:", error);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -557,9 +388,7 @@ export class HandTracker {
     */
 
     this.scheduleNextFrame();
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -574,42 +403,20 @@ export class HandTracker {
   private parseResults(
     result: any,
 
-    timestamp: number
+    timestamp: number,
   ): HandTrackingResult {
+    let leftHand: HandLandmarks | null = null;
 
-    let leftHand:
-      | HandLandmarks
-      | null = null;
+    let rightHand: HandLandmarks | null = null;
 
+    const landmarks = result.landmarks ?? [];
 
-    let rightHand:
-      | HandLandmarks
-      | null = null;
+    const handedness = result.handednesses ?? [];
 
+    for (let i = 0; i < landmarks.length; i++) {
+      const rawLandmarks = landmarks[i];
 
-    const landmarks =
-      result.landmarks ??
-      [];
-
-
-    const handedness =
-      result.handednesses ??
-      [];
-
-
-    for (
-      let i = 0;
-      i < landmarks.length;
-      i++
-    ) {
-
-      const rawLandmarks =
-        landmarks[i];
-
-
-      const rawHandedness =
-        handedness[i]?.[0];
-
+      const rawHandedness = handedness[i]?.[0];
 
       /*
       |--------------------------------------------------------------------------
@@ -617,14 +424,9 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !rawHandedness
-      ) {
-
+      if (!rawHandedness) {
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -637,24 +439,14 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      const handednessScore =
-        Number(
-          rawHandedness.score
-        );
-
+      const handednessScore = Number(rawHandedness.score);
 
       if (
-        !Number.isFinite(
-          handednessScore
-        ) ||
-        handednessScore <
-          MIN_HANDEDNESS_CONFIDENCE
+        !Number.isFinite(handednessScore) ||
+        handednessScore < MIN_HANDEDNESS_CONFIDENCE
       ) {
-
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -662,21 +454,11 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      const categoryName =
-        rawHandedness.categoryName as
-          | Handedness
-          | undefined;
+      const categoryName = rawHandedness.categoryName as Handedness | undefined;
 
-
-      if (
-        categoryName !== "Left" &&
-        categoryName !== "Right"
-      ) {
-
+      if (categoryName !== "Left" && categoryName !== "Right") {
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -685,17 +467,11 @@ export class HandTracker {
       */
 
       if (
-        !Array.isArray(
-          rawLandmarks
-        ) ||
-        rawLandmarks.length <
-          MIN_HAND_LANDMARKS
+        !Array.isArray(rawLandmarks) ||
+        rawLandmarks.length < MIN_HAND_LANDMARKS
       ) {
-
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -703,16 +479,9 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !this.areLandmarksValid(
-          rawLandmarks
-        )
-      ) {
-
+      if (!this.areLandmarksValid(rawLandmarks)) {
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -724,16 +493,9 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !this.isPlausibleHand(
-          rawLandmarks
-        )
-      ) {
-
+      if (!this.isPlausibleHand(rawLandmarks)) {
         continue;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -741,35 +503,19 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      const converted:
-        Landmark[] =
-        rawLandmarks.map(
-          (landmark: any) => ({
+      const converted: Landmark[] = rawLandmarks.map((landmark: any) => ({
+        x: landmark.x,
 
-            x:
-              landmark.x,
+        y: landmark.y,
 
-            y:
-              landmark.y,
+        z: landmark.z,
+      }));
 
-            z:
-              landmark.z,
+      const hand: HandLandmarks = {
+        handedness: categoryName,
 
-          })
-        );
-
-
-      const hand:
-        HandLandmarks = {
-
-        handedness:
-          categoryName,
-
-        landmarks:
-          converted,
-
+        landmarks: converted,
       };
-
 
       /*
       |--------------------------------------------------------------------------
@@ -777,10 +523,7 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        categoryName === "Left"
-      ) {
-
+      if (categoryName === "Left") {
         /*
         |--------------------------------------------------------------------------
         | If MediaPipe somehow returns multiple candidates with the same
@@ -788,17 +531,10 @@ export class HandTracker {
         |--------------------------------------------------------------------------
         */
 
-        if (
-          leftHand === null
-        ) {
-
-          leftHand =
-            hand;
-
+        if (leftHand === null) {
+          leftHand = hand;
         }
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -806,23 +542,12 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        categoryName === "Right"
-      ) {
-
-        if (
-          rightHand === null
-        ) {
-
-          rightHand =
-            hand;
-
+      if (categoryName === "Right") {
+        if (rightHand === null) {
+          rightHand = hand;
         }
-
       }
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -830,19 +555,9 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    this.updateLossState(
-      this.leftLoss,
-      leftHand,
-      timestamp
-    );
+    this.updateLossState(this.leftLoss, leftHand, timestamp);
 
-
-    this.updateLossState(
-      this.rightLoss,
-      rightHand,
-      timestamp
-    );
-
+    this.updateLossState(this.rightLoss, rightHand, timestamp);
 
     /*
     |--------------------------------------------------------------------------
@@ -851,17 +566,13 @@ export class HandTracker {
     */
 
     return {
-
       leftHand,
 
       rightHand,
 
       timestamp,
-
     };
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -872,48 +583,21 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private areLandmarksValid(
-    landmarks: any[]
-  ): boolean {
-
-    for (
-      const landmark of landmarks
-    ) {
-
-      if (
-        !landmark
-      ) {
-
+  private areLandmarksValid(landmarks: any[]): boolean {
+    for (const landmark of landmarks) {
+      if (!landmark) {
         return false;
-
       }
 
+      const x = Number(landmark.x);
 
-      const x =
-        Number(
-          landmark.x
-        );
+      const y = Number(landmark.y);
 
-      const y =
-        Number(
-          landmark.y
-        );
+      const z = Number(landmark.z);
 
-      const z =
-        Number(
-          landmark.z
-        );
-
-
-      if (
-        !Number.isFinite(x) ||
-        !Number.isFinite(y)
-      ) {
-
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
         return false;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -922,17 +606,9 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        x < -0.25 ||
-        x > 1.25 ||
-        y < -0.25 ||
-        y > 1.25
-      ) {
-
+      if (x < -0.25 || x > 1.25 || y < -0.25 || y > 1.25) {
         return false;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -941,10 +617,7 @@ export class HandTracker {
       |--------------------------------------------------------------------------
       */
 
-      if (
-        !Number.isFinite(z)
-      ) {
-
+      if (!Number.isFinite(z)) {
         /*
         |--------------------------------------------------------------------------
         | Some MediaPipe/browser combinations can omit z.
@@ -953,24 +626,14 @@ export class HandTracker {
         |--------------------------------------------------------------------------
         */
 
-        if (
-          landmark.z !== undefined &&
-          landmark.z !== null
-        ) {
-
+        if (landmark.z !== undefined && landmark.z !== null) {
           return false;
-
         }
-
       }
-
     }
 
-
     return true;
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -991,19 +654,10 @@ export class HandTracker {
   |--------------------------------------------------------------------------
   */
 
-  private isPlausibleHand(
-    landmarks: any[]
-  ): boolean {
-
-    if (
-      landmarks.length <
-      MIN_HAND_LANDMARKS
-    ) {
-
+  private isPlausibleHand(landmarks: any[]): boolean {
+    if (landmarks.length < MIN_HAND_LANDMARKS) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1011,34 +665,19 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const wrist =
-      landmarks[0];
+    const wrist = landmarks[0];
 
-    const indexMcp =
-      landmarks[5];
+    const indexMcp = landmarks[5];
 
-    const middleMcp =
-      landmarks[9];
+    const middleMcp = landmarks[9];
 
-    const ringMcp =
-      landmarks[13];
+    const ringMcp = landmarks[13];
 
-    const pinkyMcp =
-      landmarks[17];
+    const pinkyMcp = landmarks[17];
 
-
-    if (
-      !wrist ||
-      !indexMcp ||
-      !middleMcp ||
-      !ringMcp ||
-      !pinkyMcp
-    ) {
-
+    if (!wrist || !indexMcp || !middleMcp || !ringMcp || !pinkyMcp) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1046,59 +685,27 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    let minX =
-      Infinity;
+    let minX = Infinity;
 
-    let maxX =
-      -Infinity;
+    let maxX = -Infinity;
 
-    let minY =
-      Infinity;
+    let minY = Infinity;
 
-    let maxY =
-      -Infinity;
+    let maxY = -Infinity;
 
+    for (const landmark of landmarks) {
+      minX = Math.min(minX, landmark.x);
 
-    for (
-      const landmark of landmarks
-    ) {
+      maxX = Math.max(maxX, landmark.x);
 
-      minX =
-        Math.min(
-          minX,
-          landmark.x
-        );
+      minY = Math.min(minY, landmark.y);
 
-      maxX =
-        Math.max(
-          maxX,
-          landmark.x
-        );
-
-      minY =
-        Math.min(
-          minY,
-          landmark.y
-        );
-
-      maxY =
-        Math.max(
-          maxY,
-          landmark.y
-        );
-
+      maxY = Math.max(maxY, landmark.y);
     }
 
+    const width = maxX - minX;
 
-    const width =
-      maxX -
-      minX;
-
-
-    const height =
-      maxY -
-      minY;
-
+    const height = maxY - minY;
 
     /*
     |--------------------------------------------------------------------------
@@ -1109,25 +716,13 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      width <
-      MIN_HAND_WIDTH
-    ) {
-
+    if (width < MIN_HAND_WIDTH) {
       return false;
-
     }
 
-
-    if (
-      height <
-      MIN_HAND_HEIGHT
-    ) {
-
+    if (height < MIN_HAND_HEIGHT) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1135,22 +730,11 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const palmLength =
-      this.distance(
-        wrist,
-        middleMcp
-      );
+    const palmLength = this.distance(wrist, middleMcp);
 
-
-    if (
-      palmLength <
-      MIN_PALM_LENGTH
-    ) {
-
+    if (palmLength < MIN_PALM_LENGTH) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1158,22 +742,11 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const palmWidth =
-      this.distance(
-        indexMcp,
-        pinkyMcp
-      );
+    const palmWidth = this.distance(indexMcp, pinkyMcp);
 
-
-    if (
-      palmWidth <
-      MIN_PALM_WIDTH
-    ) {
-
+    if (palmWidth < MIN_PALM_WIDTH) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1185,29 +758,13 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const indexToPinky =
-      this.distance(
-        indexMcp,
-        pinkyMcp
-      );
+    const indexToPinky = this.distance(indexMcp, pinkyMcp);
 
+    const middleToRing = this.distance(middleMcp, ringMcp);
 
-    const middleToRing =
-      this.distance(
-        middleMcp,
-        ringMcp
-      );
-
-
-    if (
-      indexToPinky <
-      middleToRing * 0.65
-    ) {
-
+    if (indexToPinky < middleToRing * 0.65) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1219,31 +776,13 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const indexToMiddle =
-      this.distance(
-        indexMcp,
-        middleMcp
-      );
+    const indexToMiddle = this.distance(indexMcp, middleMcp);
 
+    const ringToPinky = this.distance(ringMcp, pinkyMcp);
 
-    const ringToPinky =
-      this.distance(
-        ringMcp,
-        pinkyMcp
-      );
-
-
-    if (
-      indexToMiddle <
-      0.005 &&
-      ringToPinky <
-      0.005
-    ) {
-
+    if (indexToMiddle < 0.005 && ringToPinky < 0.005) {
       return false;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1254,27 +793,14 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    const palmRatio =
-      palmWidth /
-      palmLength;
+    const palmRatio = palmWidth / palmLength;
 
-
-    if (
-      palmRatio <
-      0.15 ||
-      palmRatio >
-      3.5
-    ) {
-
+    if (palmRatio < 0.15 || palmRatio > 3.5) {
       return false;
-
     }
 
-
     return true;
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -1291,26 +817,14 @@ export class HandTracker {
     b: {
       x: number;
       y: number;
-    }
+    },
   ): number {
+    const dx = a.x - b.x;
 
-    const dx =
-      a.x -
-      b.x;
+    const dy = a.y - b.y;
 
-
-    const dy =
-      a.y -
-      b.y;
-
-
-    return Math.sqrt(
-      dx * dx +
-      dy * dy
-    );
-
+    return Math.sqrt(dx * dx + dy * dy);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -1321,36 +835,20 @@ export class HandTracker {
   private updateLossState(
     state: HandLossState,
 
-    hand:
-      | HandLandmarks
-      | null,
+    hand: HandLandmarks | null,
 
-    timestamp: number
+    timestamp: number,
   ): void {
+    if (hand) {
+      state.missingFrames = 0;
 
-    if (
-      hand
-    ) {
-
-      state.missingFrames =
-        0;
-
-      state.lastDetectedAt =
-        timestamp;
+      state.lastDetectedAt = timestamp;
 
       return;
-
     }
 
-
-    state.missingFrames =
-      Math.min(
-        state.missingFrames + 1,
-        MAX_MISSING_FRAMES
-      );
-
+    state.missingFrames = Math.min(state.missingFrames + 1, MAX_MISSING_FRAMES);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -1359,10 +857,7 @@ export class HandTracker {
   */
 
   stop(): void {
-
-    this.running =
-      false;
-
+    this.running = false;
 
     /*
     |--------------------------------------------------------------------------
@@ -1375,17 +870,10 @@ export class HandTracker {
       this.videoFrameCallbackId !== null &&
       "cancelVideoFrameCallback" in this.video
     ) {
-
-      this.video.cancelVideoFrameCallback(
-        this.videoFrameCallbackId
-      );
-
+      this.video.cancelVideoFrameCallback(this.videoFrameCallbackId);
     }
 
-
-    this.videoFrameCallbackId =
-      null;
-
+    this.videoFrameCallbackId = null;
 
     /*
     |--------------------------------------------------------------------------
@@ -1393,20 +881,11 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      this.animationFrameId !== null
-    ) {
-
-      cancelAnimationFrame(
-        this.animationFrameId
-      );
-
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
     }
 
-
-    this.animationFrameId =
-      null;
-
+    this.animationFrameId = null;
 
     /*
     |--------------------------------------------------------------------------
@@ -1414,13 +893,9 @@ export class HandTracker {
     |--------------------------------------------------------------------------
     */
 
-    this.video =
-      null;
+    this.video = null;
 
-
-    this.onResults =
-      null;
-
+    this.onResults = null;
 
     /*
     |--------------------------------------------------------------------------
@@ -1429,26 +904,15 @@ export class HandTracker {
     */
 
     this.leftLoss = {
+      missingFrames: 0,
 
-      missingFrames:
-        0,
-
-      lastDetectedAt:
-        0,
-
+      lastDetectedAt: 0,
     };
-
 
     this.rightLoss = {
+      missingFrames: 0,
 
-      missingFrames:
-        0,
-
-      lastDetectedAt:
-        0,
-
+      lastDetectedAt: 0,
     };
-
   }
-
 }

@@ -19,23 +19,16 @@
 
 import * as Tone from "tone";
 
-import type {
-  Instrument,
-} from "./Instrument";
+import type { Instrument } from "./Instrument";
 
-
-export class Rhodes
-  implements Instrument {
-
+export class Rhodes implements Instrument {
   /*
   |--------------------------------------------------------------------------
   | SYNTH
   |--------------------------------------------------------------------------
   */
 
-  private synth:
-    Tone.PolySynth;
-
+  private synth: Tone.PolySynth;
 
   /*
   |--------------------------------------------------------------------------
@@ -43,9 +36,7 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  private filter:
-    Tone.Filter;
-
+  private filter: Tone.Filter;
 
   /*
   |--------------------------------------------------------------------------
@@ -53,9 +44,7 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  private tremolo:
-    Tone.Tremolo;
-
+  private tremolo: Tone.Tremolo;
 
   /*
   |--------------------------------------------------------------------------
@@ -63,9 +52,7 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  private reverb:
-    Tone.Reverb;
-
+  private reverb: Tone.Reverb;
 
   /*
   |--------------------------------------------------------------------------
@@ -73,9 +60,7 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  private activeNotes:
-    string[] = [];
-
+  private activeNotes: string[] = [];
 
   /*
   |--------------------------------------------------------------------------
@@ -84,28 +69,21 @@ export class Rhodes
   */
 
   constructor() {
-
     /*
     |--------------------------------------------------------------------------
     | FILTER
     |--------------------------------------------------------------------------
     */
 
-    this.filter =
-      new Tone.Filter({
-        type:
-          "lowpass",
+    this.filter = new Tone.Filter({
+      type: "lowpass",
 
-        frequency:
-          5000,
+      frequency: 5000,
 
-        rolloff:
-          -24,
+      rolloff: -24,
 
-        Q:
-          0.7,
-      });
-
+      Q: 0.7,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -113,17 +91,13 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    this.tremolo =
-      new Tone.Tremolo({
-        frequency:
-          4.5,
+    this.tremolo = new Tone.Tremolo({
+      frequency: 4.5,
 
-        depth:
-          0.15,
+      depth: 0.15,
 
-        wet:
-          0.2,
-      });
+      wet: 0.2,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -133,22 +107,17 @@ export class Rhodes
 
     this.tremolo.start();
 
-
     /*
     |--------------------------------------------------------------------------
     | REVERB
     |--------------------------------------------------------------------------
     */
 
-    this.reverb =
-      new Tone.Reverb({
-        decay:
-          2,
+    this.reverb = new Tone.Reverb({
+      decay: 2,
 
-        wet:
-          0.2,
-      });
-
+      wet: 0.2,
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -160,31 +129,21 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    this.synth =
-      new Tone.PolySynth(
-        Tone.Synth,
-        {
-          oscillator: {
-            type:
-              "triangle",
-          },
+    this.synth = new Tone.PolySynth(Tone.Synth, {
+      oscillator: {
+        type: "triangle",
+      },
 
-          envelope: {
-            attack:
-              0.02,
+      envelope: {
+        attack: 0.02,
 
-            decay:
-              0.25,
+        decay: 0.25,
 
-            sustain:
-              0.55,
+        sustain: 0.55,
 
-            release:
-              1.2,
-          },
-        }
-      );
-
+        release: 1.2,
+      },
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -205,19 +164,11 @@ export class Rhodes
     */
 
     this.synth
-      .connect(
-        this.filter
-      )
-      .connect(
-        this.tremolo
-      )
-      .connect(
-        this.reverb
-      )
+      .connect(this.filter)
+      .connect(this.tremolo)
+      .connect(this.reverb)
       .toDestination();
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -229,24 +180,16 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  play(
-    notes: string[]
-  ): void {
-
+  play(notes: string[]): void {
     /*
     |--------------------------------------------------------------------------
     | EMPTY CHORD
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notes.length === 0
-    ) {
-
+    if (notes.length === 0) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -254,13 +197,7 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    const nextNotes =
-      Array.from(
-        new Set(
-          notes
-        )
-      ).sort();
-
+    const nextNotes = Array.from(new Set(notes)).sort();
 
     /*
     |--------------------------------------------------------------------------
@@ -268,9 +205,7 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    const currentNotes =
-      this.activeNotes;
-
+    const currentNotes = this.activeNotes;
 
     /*
     |--------------------------------------------------------------------------
@@ -278,14 +213,9 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    const notesToRelease =
-      currentNotes.filter(
-        note =>
-          !nextNotes.includes(
-            note
-          )
-      );
-
+    const notesToRelease = currentNotes.filter(
+      (note) => !nextNotes.includes(note),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -293,14 +223,9 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    const notesToAttack =
-      nextNotes.filter(
-        note =>
-          !currentNotes.includes(
-            note
-          )
-      );
-
+    const notesToAttack = nextNotes.filter(
+      (note) => !currentNotes.includes(note),
+    );
 
     /*
     |--------------------------------------------------------------------------
@@ -308,15 +233,9 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToRelease.length === 0 &&
-      notesToAttack.length === 0
-    ) {
-
+    if (notesToRelease.length === 0 && notesToAttack.length === 0) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -324,16 +243,9 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToRelease.length > 0
-    ) {
-
-      this.synth.triggerRelease(
-        notesToRelease
-      );
-
+    if (notesToRelease.length > 0) {
+      this.synth.triggerRelease(notesToRelease);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -341,16 +253,9 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    if (
-      notesToAttack.length > 0
-    ) {
-
-      this.synth.triggerAttack(
-        notesToAttack
-      );
-
+    if (notesToAttack.length > 0) {
+      this.synth.triggerAttack(notesToAttack);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -358,11 +263,8 @@ export class Rhodes
     |--------------------------------------------------------------------------
     */
 
-    this.activeNotes =
-      nextNotes;
-
+    this.activeNotes = nextNotes;
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -371,26 +273,14 @@ export class Rhodes
   */
 
   stop(): void {
-
-    if (
-      this.activeNotes.length === 0
-    ) {
-
+    if (this.activeNotes.length === 0) {
       return;
-
     }
 
+    this.synth.triggerRelease(this.activeNotes);
 
-    this.synth.triggerRelease(
-      this.activeNotes
-    );
-
-
-    this.activeNotes =
-      [];
-
+    this.activeNotes = [];
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -398,29 +288,11 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  setVolume(
-    value: number
-  ): void {
+  setVolume(value: number): void {
+    const safeValue = Math.max(0.001, Math.min(1, value));
 
-    const safeValue =
-      Math.max(
-        0.001,
-        Math.min(
-          1,
-          value
-        )
-      );
-
-
-    this.synth.volume.rampTo(
-      Tone.gainToDb(
-        safeValue
-      ),
-      0.05
-    );
-
+    this.synth.volume.rampTo(Tone.gainToDb(safeValue), 0.05);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -428,27 +300,11 @@ export class Rhodes
   |--------------------------------------------------------------------------
   */
 
-  setFilter(
-    frequency: number
-  ): void {
+  setFilter(frequency: number): void {
+    const safeFrequency = Math.max(100, Math.min(20000, frequency));
 
-    const safeFrequency =
-      Math.max(
-        100,
-        Math.min(
-          20000,
-          frequency
-        )
-      );
-
-
-    this.filter.frequency.rampTo(
-      safeFrequency,
-      0.08
-    );
-
+    this.filter.frequency.rampTo(safeFrequency, 0.08);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -468,7 +324,6 @@ export class Rhodes
   */
 
   dispose(): void {
-
     /*
     |--------------------------------------------------------------------------
     | Stop active notes
@@ -477,7 +332,6 @@ export class Rhodes
 
     this.stop();
 
-
     /*
     |--------------------------------------------------------------------------
     | Stop tremolo LFO
@@ -485,7 +339,6 @@ export class Rhodes
     */
 
     this.tremolo.stop();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -500,7 +353,5 @@ export class Rhodes
     this.tremolo.dispose();
 
     this.reverb.dispose();
-
   }
-
 }

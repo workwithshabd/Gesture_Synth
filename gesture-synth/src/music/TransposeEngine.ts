@@ -1,12 +1,6 @@
-import {
-  midiToNote,
-  noteStringToMidi,
-  transposeRoot,
-} from "./NoteUtils";
+import { midiToNote, noteStringToMidi, transposeRoot } from "./NoteUtils";
 
-import type {
-  RootNote,
-} from "./types";
+import type { RootNote } from "./types";
 
 export class TransposeEngine {
   /**
@@ -15,16 +9,12 @@ export class TransposeEngine {
   transposeNotes(
     notes: string[],
     semitones: number,
-    preferFlats = false
+    preferFlats = false,
   ): string[] {
-    return notes.map(note => {
-      const midi =
-        noteStringToMidi(note);
+    return notes.map((note) => {
+      const midi = noteStringToMidi(note);
 
-      return midiToNote(
-        midi + semitones,
-        preferFlats
-      );
+      return midiToNote(midi + semitones, preferFlats);
     });
   }
 
@@ -34,13 +24,7 @@ export class TransposeEngine {
    * This is the important operation
    * for Thumb + Pinky.
    */
-  transposeRoot(
-    root: RootNote,
-    semitones: number
-  ): RootNote {
-    return transposeRoot(
-      root,
-      semitones
-    );
+  transposeRoot(root: RootNote, semitones: number): RootNote {
+    return transposeRoot(root, semitones);
   }
 }

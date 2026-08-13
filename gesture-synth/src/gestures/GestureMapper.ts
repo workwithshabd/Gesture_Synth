@@ -4,14 +4,9 @@
 |--------------------------------------------------------------------------
 */
 
-import type {
-  TiltDirection,
-} from "./TiltDetector";
+import type { TiltDirection } from "./TiltDetector";
 
-import {
-  getTiltDirection,
-} from "./TiltDetector";
-
+import { getTiltDirection } from "./TiltDetector";
 
 /*
 |--------------------------------------------------------------------------
@@ -19,9 +14,7 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export type ChordQuality =
-  | "MAJOR"
-  | "MINOR";
+export type ChordQuality = "MAJOR" | "MINOR";
 
 export type ChordShape =
   | "ROOT"
@@ -29,20 +22,14 @@ export type ChordShape =
   | "SEVENTH"
   | "DOMINANT_DIMINISHED";
 
-export type Octave =
-  | "HIGHER"
-  | "LOWER"
-  | "NORMAL";
-
+export type Octave = "HIGHER" | "LOWER" | "NORMAL";
 
 export interface FingerState {
   extended: boolean;
   confidence: number;
 }
 
-
 export interface StableFingers {
-
   count: number;
 
   thumb: FingerState;
@@ -64,7 +51,6 @@ export interface StableFingers {
   handedness?: "Left" | "Right";
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | LEFT HAND
@@ -72,14 +58,12 @@ export interface StableFingers {
 */
 
 export interface LeftGesture {
-
   degree: string;
 
   quality: ChordQuality;
 
   tilt: TiltDirection;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -90,69 +74,35 @@ export interface LeftGesture {
 export function mapLeftGesture(
   fingers: StableFingers | null,
 ): LeftGesture | null {
-
   if (!fingers) {
     return null;
   }
 
-  const thumb =
-    fingers.thumb.extended;
+  const thumb = fingers.thumb.extended;
 
-  const index =
-    fingers.index.extended;
+  const index = fingers.index.extended;
 
-  const middle =
-    fingers.middle.extended;
+  const middle = fingers.middle.extended;
 
-  const ring =
-    fingers.ring.extended;
+  const ring = fingers.ring.extended;
 
-  const pinky =
-    fingers.pinky.extended;
-
+  const pinky = fingers.pinky.extended;
 
   const fingerCount =
-    Number(index) +
-    Number(middle) +
-    Number(ring) +
-    Number(pinky);
-
+    Number(index) + Number(middle) + Number(ring) + Number(pinky);
 
   const tilt =
-    fingers.landmarks &&
-    fingers.landmarks.length >= 18
-      ? getTiltDirection(
-          fingers.landmarks,
-          fingers.handedness ?? "Left"
-        )
+    fingers.landmarks && fingers.landmarks.length >= 18
+      ? getTiltDirection(fingers.landmarks, fingers.handedness ?? "Left")
       : "NEUTRAL";
 
+  const quality: ChordQuality = tilt === "OUTWARD" ? "MINOR" : "MAJOR";
 
-  const quality: ChordQuality =
-    tilt === "OUTWARD"
-      ? "MINOR"
-      : "MAJOR";
+  let degree: string | null = null;
 
-
-  let degree:
-    | string
-    | null = null;
-
-
-  if (
-    fingerCount === 1 &&
-    index &&
-    !middle &&
-    !ring &&
-    !pinky &&
-    !thumb
-  ) {
-
+  if (fingerCount === 1 && index && !middle && !ring && !pinky && !thumb) {
     degree = "I";
-
-  }
-
-  else if (
+  } else if (
     fingerCount === 2 &&
     index &&
     middle &&
@@ -160,51 +110,14 @@ export function mapLeftGesture(
     !pinky &&
     !thumb
   ) {
-
     degree = "II";
-
-  }
-
-  else if (
-    fingerCount === 3 &&
-    index &&
-    middle &&
-    ring &&
-    !pinky &&
-    !thumb
-  ) {
-
+  } else if (fingerCount === 3 && index && middle && ring && !pinky && !thumb) {
     degree = "III";
-
-  }
-
-  else if (
-    fingerCount === 4 &&
-    index &&
-    middle &&
-    ring &&
-    pinky &&
-    !thumb
-  ) {
-
+  } else if (fingerCount === 4 && index && middle && ring && pinky && !thumb) {
     degree = "IV";
-
-  }
-
-  else if (
-    thumb &&
-    fingerCount === 4 &&
-    index &&
-    middle &&
-    ring &&
-    pinky
-  ) {
-
+  } else if (thumb && fingerCount === 4 && index && middle && ring && pinky) {
     degree = "V";
-
-  }
-
-  else if (
+  } else if (
     fingerCount === 2 &&
     index &&
     pinky &&
@@ -212,38 +125,21 @@ export function mapLeftGesture(
     !ring &&
     !thumb
   ) {
-
     degree = "VI";
-
-  }
-
-  else if (
-    thumb &&
-    fingerCount === 2 &&
-    index &&
-    pinky &&
-    !middle &&
-    !ring
-  ) {
-
+  } else if (thumb && fingerCount === 2 && index && pinky && !middle && !ring) {
     degree = "VII";
-
   }
-
 
   if (!degree) {
     return null;
   }
-
 
   return {
     degree,
     quality,
     tilt,
   };
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -252,14 +148,12 @@ export function mapLeftGesture(
 */
 
 export interface RightGesture {
-
   shape: ChordShape;
 
   tilt: TiltDirection;
 
   semitoneChange: -1 | 0 | 1;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -277,41 +171,25 @@ export interface RightGesture {
 export function mapRightGesture(
   fingers: StableFingers | null,
 ): RightGesture | null {
-
   if (!fingers) {
     return null;
   }
 
+  const index = fingers.index.extended;
 
-  const index =
-    fingers.index.extended;
+  const middle = fingers.middle.extended;
 
-  const middle =
-    fingers.middle.extended;
+  const ring = fingers.ring.extended;
 
-  const ring =
-    fingers.ring.extended;
-
-  const pinky =
-    fingers.pinky.extended;
-
+  const pinky = fingers.pinky.extended;
 
   const nonThumbCount =
-    Number(index) +
-    Number(middle) +
-    Number(ring) +
-    Number(pinky);
-
+    Number(index) + Number(middle) + Number(ring) + Number(pinky);
 
   const tilt =
-    fingers.landmarks &&
-    fingers.landmarks.length >= 18
-      ? getTiltDirection(
-          fingers.landmarks,
-          fingers.handedness ?? "Right"
-        )
+    fingers.landmarks && fingers.landmarks.length >= 18
+      ? getTiltDirection(fingers.landmarks, fingers.handedness ?? "Right")
       : "NEUTRAL";
-
 
   /*
   |--------------------------------------------------------------------------
@@ -328,46 +206,23 @@ export function mapRightGesture(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    isChordSemitoneGesture(
-      fingers
-    )
-  ) {
+  if (isChordSemitoneGesture(fingers)) {
+    let semitoneChange: -1 | 0 | 1 = 0;
 
-    let semitoneChange:
-      -1 | 0 | 1 = 0;
-
-
-    if (
-      tilt === "OUTWARD"
-    ) {
-
+    if (tilt === "OUTWARD") {
       semitoneChange = 1;
-
-    }
-
-    else if (
-      tilt === "INWARD"
-    ) {
-
+    } else if (tilt === "INWARD") {
       semitoneChange = -1;
-
     }
-
 
     return {
-
-      shape:
-        "ROOT",
+      shape: "ROOT",
 
       tilt,
 
       semitoneChange,
-
     };
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -375,63 +230,30 @@ export function mapRightGesture(
   |--------------------------------------------------------------------------
   */
 
-  let shape:
-    | ChordShape
-    | null = null;
+  let shape: ChordShape | null = null;
 
-
-  if (
-    nonThumbCount === 1
-  ) {
-
+  if (nonThumbCount === 1) {
     shape = "ROOT";
-
-  }
-
-  else if (
-    nonThumbCount === 2
-  ) {
-
+  } else if (nonThumbCount === 2) {
     shape = "INVERSION";
-
-  }
-
-  else if (
-    nonThumbCount === 3
-  ) {
-
+  } else if (nonThumbCount === 3) {
     shape = "SEVENTH";
-
+  } else if (nonThumbCount === 4) {
+    shape = "DOMINANT_DIMINISHED";
   }
-
-  else if (
-    nonThumbCount === 4
-  ) {
-
-    shape =
-      "DOMINANT_DIMINISHED";
-
-  }
-
 
   if (!shape) {
     return null;
   }
 
-
   return {
-
     shape,
 
     tilt,
 
-    semitoneChange:
-      0,
-
+    semitoneChange: 0,
   };
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -448,14 +270,10 @@ export function mapRightGesture(
 |--------------------------------------------------------------------------
 */
 
-export function mapOctave(
-  fingers: StableFingers | null
-): Octave {
-
+export function mapOctave(fingers: StableFingers | null): Octave {
   if (!fingers) {
     return "NORMAL";
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -463,30 +281,16 @@ export function mapOctave(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    isTransposeGesture(
-      fingers
-    )
-  ) {
-
+  if (isTransposeGesture(fingers)) {
     return "NORMAL";
-
   }
 
-
-  if (
-    fingers.thumb.extended
-  ) {
-
+  if (fingers.thumb.extended) {
     return "LOWER";
-
   }
-
 
   return "NORMAL";
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -505,14 +309,10 @@ export function mapOctave(
 |--------------------------------------------------------------------------
 */
 
-export function isTransposeGesture(
-  fingers: StableFingers | null
-): boolean {
-
+export function isTransposeGesture(fingers: StableFingers | null): boolean {
   if (!fingers) {
     return false;
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -524,33 +324,18 @@ export function isTransposeGesture(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    isChordSemitoneGesture(
-      fingers
-    )
-  ) {
-
+  if (isChordSemitoneGesture(fingers)) {
     return false;
-
   }
 
-
   return (
-
     fingers.thumb.extended &&
-
     !fingers.index.extended &&
-
     !fingers.middle.extended &&
-
     !fingers.ring.extended &&
-
     !fingers.pinky.extended
-
   );
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -567,25 +352,15 @@ export function isTransposeGesture(
 |--------------------------------------------------------------------------
 */
 
-export function isChordSemitoneGesture(
-  fingers: StableFingers | null
-): boolean {
-
+export function isChordSemitoneGesture(fingers: StableFingers | null): boolean {
   if (!fingers) {
     return false;
   }
 
-
   return (
-
     fingers.index.extended &&
-
     fingers.pinky.extended &&
-
     !fingers.middle.extended &&
-
     !fingers.ring.extended
-
   );
-
 }

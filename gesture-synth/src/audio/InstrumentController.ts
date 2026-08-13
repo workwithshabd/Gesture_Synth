@@ -21,30 +21,20 @@
 |--------------------------------------------------------------------------
 */
 
-import {
-  AudioEngine,
-} from "./AudioEngine";
+import { AudioEngine } from "./AudioEngine";
 
-import {
-  generateChordNotes,
-} from "./ChordGenerator";
+import { generateChordNotes } from "./ChordGenerator";
 
-import type {
-  ChordState,
-} from "./ChordGenerator";
-
+import type { ChordState } from "./ChordGenerator";
 
 export class InstrumentController {
-
   /*
   |--------------------------------------------------------------------------
   | AUDIO
   |--------------------------------------------------------------------------
   */
 
-  private audio:
-    AudioEngine;
-
+  private audio: AudioEngine;
 
   /*
   |--------------------------------------------------------------------------
@@ -52,9 +42,7 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  private currentNotes:
-    string[] = [];
-
+  private currentNotes: string[] = [];
 
   /*
   |--------------------------------------------------------------------------
@@ -62,9 +50,7 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  private currentState:
-    ChordState | null = null;
-
+  private currentState: ChordState | null = null;
 
   /*
   |--------------------------------------------------------------------------
@@ -72,16 +58,9 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  constructor(
-    audioEngine?: AudioEngine
-  ) {
-
-    this.audio =
-      audioEngine ??
-      new AudioEngine();
-
+  constructor(audioEngine?: AudioEngine) {
+    this.audio = audioEngine ?? new AudioEngine();
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -94,11 +73,8 @@ export class InstrumentController {
   */
 
   async start(): Promise<void> {
-
     await this.audio.start();
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -111,15 +87,8 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  playChord(
-    state: ChordState
-  ): string[] {
-
-    const notes =
-      generateChordNotes(
-        state
-      );
-
+  playChord(state: ChordState): string[] {
+    const notes = generateChordNotes(state);
 
     /*
     |--------------------------------------------------------------------------
@@ -127,17 +96,9 @@ export class InstrumentController {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      this.notesEqual(
-        notes,
-        this.currentNotes
-      )
-    ) {
-
+    if (this.notesEqual(notes, this.currentNotes)) {
       return notes;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -145,14 +106,9 @@ export class InstrumentController {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      this.currentNotes.length > 0
-    ) {
-
+    if (this.currentNotes.length > 0) {
       this.audio.stop();
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -160,10 +116,7 @@ export class InstrumentController {
     |--------------------------------------------------------------------------
     */
 
-    this.audio.play(
-      notes
-    );
-
+    this.audio.play(notes);
 
     /*
     |--------------------------------------------------------------------------
@@ -171,23 +124,15 @@ export class InstrumentController {
     |--------------------------------------------------------------------------
     */
 
-    this.currentNotes =
-      notes;
+    this.currentNotes = notes;
 
-    this.currentState =
-      {
-        ...state,
-        chordSemitone:
-          this.clampSemitone(
-            state.chordSemitone
-          ),
-      };
-
+    this.currentState = {
+      ...state,
+      chordSemitone: this.clampSemitone(state.chordSemitone),
+    };
 
     return notes;
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -200,23 +145,13 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  previewChord(
-    state: ChordState
-  ): string[] {
+  previewChord(state: ChordState): string[] {
+    return generateChordNotes({
+      ...state,
 
-    return generateChordNotes(
-      {
-        ...state,
-
-        chordSemitone:
-          this.clampSemitone(
-            state.chordSemitone
-          ),
-      }
-    );
-
+      chordSemitone: this.clampSemitone(state.chordSemitone),
+    });
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -225,17 +160,12 @@ export class InstrumentController {
   */
 
   stop(): void {
-
     this.audio.stop();
 
-    this.currentNotes =
-      [];
+    this.currentNotes = [];
 
-    this.currentState =
-      null;
-
+    this.currentState = null;
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -243,26 +173,11 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  setVolume(
-    value: number
-  ): void {
+  setVolume(value: number): void {
+    const volume = Math.max(0, Math.min(1, value));
 
-    const volume =
-      Math.max(
-        0,
-        Math.min(
-          1,
-          value
-        )
-      );
-
-
-    this.audio.setVolume(
-      volume
-    );
-
+    this.audio.setVolume(volume);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -270,16 +185,9 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  setFilter(
-    frequency: number
-  ): void {
-
-    this.audio.setFilter(
-      frequency
-    );
-
+  setFilter(frequency: number): void {
+    this.audio.setFilter(frequency);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -287,15 +195,9 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  getCurrentNotes():
-    string[] {
-
-    return [
-      ...this.currentNotes,
-    ];
-
+  getCurrentNotes(): string[] {
+    return [...this.currentNotes];
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -303,24 +205,15 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  getCurrentState():
-    ChordState | null {
-
-    if (
-      !this.currentState
-    ) {
-
+  getCurrentState(): ChordState | null {
+    if (!this.currentState) {
       return null;
-
     }
-
 
     return {
       ...this.currentState,
     };
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -337,26 +230,11 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  private clampSemitone(
-    value: number
-  ): number {
+  private clampSemitone(value: number): number {
+    const rounded = Math.round(value);
 
-    const rounded =
-      Math.round(
-        value
-      );
-
-
-    return Math.max(
-      -1,
-      Math.min(
-        1,
-        rounded
-      )
-    );
-
+    return Math.max(-1, Math.min(1, rounded));
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -364,40 +242,17 @@ export class InstrumentController {
   |--------------------------------------------------------------------------
   */
 
-  private notesEqual(
-    a: string[],
-    b: string[]
-  ): boolean {
-
-    if (
-      a.length !==
-      b.length
-    ) {
-
+  private notesEqual(a: string[], b: string[]): boolean {
+    if (a.length !== b.length) {
       return false;
-
     }
 
-
-    for (
-      let i = 0;
-      i < a.length;
-      i++
-    ) {
-
-      if (
-        a[i] !== b[i]
-      ) {
-
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
         return false;
-
       }
-
     }
-
 
     return true;
-
   }
-
 }

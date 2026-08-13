@@ -5,45 +5,33 @@ import { Rhodes } from "./Rhodes";
 
 import type { Instrument } from "./Instrument";
 
-export type InstrumentType =
-  | "ORGAN"
-  | "RHODES";
+export type InstrumentType = "ORGAN" | "RHODES";
 
 export class AudioEngine {
   private instrument: Instrument;
 
-  private instrumentType:
-    InstrumentType = "ORGAN";
+  private instrumentType: InstrumentType = "ORGAN";
 
-  private volume =
-    0.3;
+  private volume = 0.3;
 
   constructor() {
-    this.instrument =
-      new Organ();
+    this.instrument = new Organ();
   }
 
   async start(): Promise<void> {
     await Tone.start();
 
-    if (
-      Tone.getContext().state !==
-      "running"
-    ) {
+    if (Tone.getContext().state !== "running") {
       await Tone.getContext().resume();
     }
   }
 
   play(notes: string[]): void {
-    if (
-      notes.length === 0
-    ) {
+    if (notes.length === 0) {
       return;
     }
 
-    this.instrument.play(
-      notes
-    );
+    this.instrument.play(notes);
   }
 
   stop(): void {
@@ -51,36 +39,17 @@ export class AudioEngine {
   }
 
   setVolume(value: number): void {
-    this.volume =
-      Math.max(
-        0,
-        Math.min(
-          1,
-          value
-        )
-      );
+    this.volume = Math.max(0, Math.min(1, value));
 
-    this.instrument.setVolume(
-      this.volume
-    );
+    this.instrument.setVolume(this.volume);
   }
 
-  setFilter(
-    frequency: number
-  ): void {
-    this.instrument.setFilter(
-      frequency
-    );
+  setFilter(frequency: number): void {
+    this.instrument.setFilter(frequency);
   }
 
-  setInstrument(
-    type: InstrumentType
-  ): void {
-
-    if (
-      type ===
-      this.instrumentType
-    ) {
+  setInstrument(type: InstrumentType): void {
+    if (type === this.instrumentType) {
       return;
     }
 
@@ -106,14 +75,10 @@ export class AudioEngine {
     |--------------------------------------------------------------------------
     */
 
-    if (
-      type === "ORGAN"
-    ) {
-      this.instrument =
-        new Organ();
+    if (type === "ORGAN") {
+      this.instrument = new Organ();
     } else {
-      this.instrument =
-        new Rhodes();
+      this.instrument = new Rhodes();
     }
 
     /*
@@ -122,16 +87,12 @@ export class AudioEngine {
     |--------------------------------------------------------------------------
     */
 
-    this.instrument.setVolume(
-      this.volume
-    );
+    this.instrument.setVolume(this.volume);
 
-    this.instrumentType =
-      type;
+    this.instrumentType = type;
   }
 
-  getInstrument():
-    InstrumentType {
+  getInstrument(): InstrumentType {
     return this.instrumentType;
   }
 

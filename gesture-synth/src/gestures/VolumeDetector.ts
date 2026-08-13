@@ -20,7 +20,6 @@ export interface VolumeResult {
   percentage: number;
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | Configuration
@@ -37,28 +36,15 @@ const TOP_Y = 0.15;
 
 const BOTTOM_Y = 0.85;
 
-
 /*
 |--------------------------------------------------------------------------
 | Clamp
 |--------------------------------------------------------------------------
 */
 
-function clamp(
-  value: number,
-  min: number,
-  max: number
-): number {
-
-  return Math.max(
-    min,
-    Math.min(
-      max,
-      value
-    )
-  );
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -73,19 +59,14 @@ export function getHandVolume(
         y: number;
         z?: number;
       }[]
-    | undefined
+    | undefined,
 ): VolumeResult {
-
-  if (
-    !landmarks ||
-    landmarks.length === 0
-  ) {
+  if (!landmarks || landmarks.length === 0) {
     return {
       volume: 0.7,
       percentage: 70,
     };
   }
-
 
   /*
    * Use wrist + MCP points instead of a single landmark.
@@ -94,26 +75,16 @@ export function getHandVolume(
    */
 
   const importantPoints = [
-    landmarks[0],  // wrist
-    landmarks[5],  // index MCP
-    landmarks[9],  // middle MCP
+    landmarks[0], // wrist
+    landmarks[5], // index MCP
+    landmarks[9], // middle MCP
     landmarks[13], // ring MCP
     landmarks[17], // pinky MCP
   ].filter(Boolean);
 
-
   const averageY =
-    importantPoints.reduce(
-      (
-        total,
-        point
-      ) =>
-        total +
-        point.y,
-      0
-    ) /
+    importantPoints.reduce((total, point) => total + point.y, 0) /
     importantPoints.length;
-
 
   /*
    * Convert:
@@ -122,31 +93,12 @@ export function getHandVolume(
    * BOTTOM_Y -> 0
    */
 
-  const normalized =
-    1 -
-    (
-      averageY -
-      TOP_Y
-    ) /
-    (
-      BOTTOM_Y -
-      TOP_Y
-    );
+  const normalized = 1 - (averageY - TOP_Y) / (BOTTOM_Y - TOP_Y);
 
-
-  const volume =
-    clamp(
-      normalized,
-      0,
-      1
-    );
-
+  const volume = clamp(normalized, 0, 1);
 
   return {
     volume,
-    percentage:
-      Math.round(
-        volume * 100
-      ),
+    percentage: Math.round(volume * 100),
   };
 }

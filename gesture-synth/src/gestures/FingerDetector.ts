@@ -4,10 +4,7 @@
 |--------------------------------------------------------------------------
 */
 
-import type {
-  HandLandmarks,
-} from "./types";
-
+import type { HandLandmarks } from "./types";
 
 /*
 |--------------------------------------------------------------------------
@@ -19,7 +16,6 @@ export interface FingerResult {
   extended: boolean;
   confidence: number;
 }
-
 
 export interface FingerState {
   thumb: FingerResult;
@@ -42,13 +38,11 @@ export interface FingerState {
   handedness: HandLandmarks["handedness"];
 }
 
-
 type Point = {
   x: number;
   y: number;
   z?: number;
 };
-
 
 /*
 |--------------------------------------------------------------------------
@@ -63,81 +57,31 @@ type Point = {
 |--------------------------------------------------------------------------
 */
 
-function angle(
-  a: Point,
-  b: Point,
-  c: Point
-): number {
+function angle(a: Point, b: Point, c: Point): number {
+  const abx = a.x - b.x;
 
-  const abx =
-    a.x - b.x;
+  const aby = a.y - b.y;
 
-  const aby =
-    a.y - b.y;
+  const cbx = c.x - b.x;
 
-  const cbx =
-    c.x - b.x;
+  const cby = c.y - b.y;
 
-  const cby =
-    c.y - b.y;
+  const dot = abx * cbx + aby * cby;
 
+  const magnitudeAB = Math.hypot(abx, aby);
 
-  const dot =
-    abx * cbx +
-    aby * cby;
+  const magnitudeCB = Math.hypot(cbx, cby);
 
-
-  const magnitudeAB =
-    Math.hypot(
-      abx,
-      aby
-    );
-
-
-  const magnitudeCB =
-    Math.hypot(
-      cbx,
-      cby
-    );
-
-
-  if (
-    magnitudeAB === 0 ||
-    magnitudeCB === 0
-  ) {
-
+  if (magnitudeAB === 0 || magnitudeCB === 0) {
     return 0;
-
   }
 
+  const cosine = dot / (magnitudeAB * magnitudeCB);
 
-  const cosine =
-    dot /
-    (
-      magnitudeAB *
-      magnitudeCB
-    );
+  const clampedCosine = Math.max(-1, Math.min(1, cosine));
 
-
-  const clampedCosine =
-    Math.max(
-      -1,
-      Math.min(
-        1,
-        cosine
-      )
-    );
-
-
-  return (
-    Math.acos(
-      clampedCosine
-    ) *
-    (180 / Math.PI)
-  );
-
+  return Math.acos(clampedCosine) * (180 / Math.PI);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -145,18 +89,9 @@ function angle(
 |--------------------------------------------------------------------------
 */
 
-function distance(
-  a: Point,
-  b: Point
-): number {
-
-  return Math.hypot(
-    a.x - b.x,
-    a.y - b.y
-  );
-
+function distance(a: Point, b: Point): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -171,37 +106,17 @@ function distance(
 |--------------------------------------------------------------------------
 */
 
-function getHandScale(
-  hand: HandLandmarks
-): number {
+function getHandScale(hand: HandLandmarks): number {
+  const wrist = hand.landmarks[0];
 
-  const wrist =
-    hand.landmarks[0];
+  const middleMcp = hand.landmarks[9];
 
-  const middleMcp =
-    hand.landmarks[9];
-
-
-  if (
-    !wrist ||
-    !middleMcp
-  ) {
-
+  if (!wrist || !middleMcp) {
     return 1;
-
   }
 
-
-  return Math.max(
-    distance(
-      wrist,
-      middleMcp
-    ),
-    0.0001
-  );
-
+  return Math.max(distance(wrist, middleMcp), 0.0001);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -214,37 +129,17 @@ function getHandScale(
 |--------------------------------------------------------------------------
 */
 
-function normalize(
-  value: number,
-  min: number,
-  max: number
-): number {
-
-  if (
-    value <= min
-  ) {
-
+function normalize(value: number, min: number, max: number): number {
+  if (value <= min) {
     return 0;
-
   }
 
-
-  if (
-    value >= max
-  ) {
-
+  if (value >= max) {
     return 1;
-
   }
 
-
-  return (
-    (value - min) /
-    (max - min)
-  );
-
+  return (value - min) / (max - min);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -264,44 +159,22 @@ function detectFinger(
   mcpIndex: number,
   pipIndex: number,
   dipIndex: number,
-  tipIndex: number
+  tipIndex: number,
 ): FingerResult {
+  const mcp = hand.landmarks[mcpIndex];
 
-  const mcp =
-    hand.landmarks[
-      mcpIndex
-    ];
+  const pip = hand.landmarks[pipIndex];
 
-  const pip =
-    hand.landmarks[
-      pipIndex
-    ];
+  const dip = hand.landmarks[dipIndex];
 
-  const dip =
-    hand.landmarks[
-      dipIndex
-    ];
+  const tip = hand.landmarks[tipIndex];
 
-  const tip =
-    hand.landmarks[
-      tipIndex
-    ];
-
-
-  if (
-    !mcp ||
-    !pip ||
-    !dip ||
-    !tip
-  ) {
-
+  if (!mcp || !pip || !dip || !tip) {
     return {
       extended: false,
       confidence: 0,
     };
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -309,21 +182,9 @@ function detectFinger(
   |--------------------------------------------------------------------------
   */
 
-  const firstAngle =
-    angle(
-      mcp,
-      pip,
-      dip
-    );
+  const firstAngle = angle(mcp, pip, dip);
 
-
-  const secondAngle =
-    angle(
-      pip,
-      dip,
-      tip
-    );
-
+  const secondAngle = angle(pip, dip, tip);
 
   /*
   |--------------------------------------------------------------------------
@@ -336,28 +197,11 @@ function detectFinger(
   |--------------------------------------------------------------------------
   */
 
-  const firstScore =
-    normalize(
-      firstAngle,
-      125,
-      175
-    );
+  const firstScore = normalize(firstAngle, 125, 175);
 
+  const secondScore = normalize(secondAngle, 125, 175);
 
-  const secondScore =
-    normalize(
-      secondAngle,
-      125,
-      175
-    );
-
-
-  const confidence =
-    (
-      firstScore +
-      secondScore
-    ) / 2;
-
+  const confidence = (firstScore + secondScore) / 2;
 
   /*
   |--------------------------------------------------------------------------
@@ -374,22 +218,14 @@ function detectFinger(
   |--------------------------------------------------------------------------
   */
 
-  const extended =
-    firstAngle >= 135 &&
-    secondAngle >= 140 &&
-    confidence >= 0.70;
-
+  const extended = firstAngle >= 135 && secondAngle >= 140 && confidence >= 0.7;
 
   return {
-
     extended,
 
     confidence,
-
   };
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -408,51 +244,27 @@ function detectFinger(
 |
 |--------------------------------------------------------------------------
 */
-function detectThumb(
-  hand: HandLandmarks
-): FingerResult {
+function detectThumb(hand: HandLandmarks): FingerResult {
+  const wrist = hand.landmarks[0];
 
-  const wrist =
-    hand.landmarks[0];
+  const thumbCmc = hand.landmarks[1];
 
-  const thumbCmc =
-    hand.landmarks[1];
+  const thumbMcp = hand.landmarks[2];
 
-  const thumbMcp =
-    hand.landmarks[2];
+  const thumbIp = hand.landmarks[3];
 
-  const thumbIp =
-    hand.landmarks[3];
+  const thumbTip = hand.landmarks[4];
 
-  const thumbTip =
-    hand.landmarks[4];
+  const indexMcp = hand.landmarks[5];
 
-  const indexMcp =
-    hand.landmarks[5];
-
-
-  if (
-    !wrist ||
-    !thumbCmc ||
-    !thumbMcp ||
-    !thumbIp ||
-    !thumbTip ||
-    !indexMcp
-  ) {
-
+  if (!wrist || !thumbCmc || !thumbMcp || !thumbIp || !thumbTip || !indexMcp) {
     return {
       extended: false,
       confidence: 0,
     };
-
   }
 
-
-  const handScale =
-    getHandScale(
-      hand
-    );
-
+  const handScale = getHandScale(hand);
 
   /*
   |--------------------------------------------------------------------------
@@ -473,13 +285,7 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const mcpAngle =
-    angle(
-      thumbCmc,
-      thumbMcp,
-      thumbIp
-    );
-
+  const mcpAngle = angle(thumbCmc, thumbMcp, thumbIp);
 
   /*
   |--------------------------------------------------------------------------
@@ -491,13 +297,7 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const ipAngle =
-    angle(
-      thumbMcp,
-      thumbIp,
-      thumbTip
-    );
-
+  const ipAngle = angle(thumbMcp, thumbIp, thumbTip);
 
   /*
   |--------------------------------------------------------------------------
@@ -512,13 +312,7 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const thumbSpread =
-    distance(
-      thumbTip,
-      indexMcp
-    ) /
-    handScale;
-
+  const thumbSpread = distance(thumbTip, indexMcp) / handScale;
 
   /*
   |--------------------------------------------------------------------------
@@ -526,21 +320,9 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const mcpScore =
-    normalize(
-      mcpAngle,
-      110,
-      170
-    );
+  const mcpScore = normalize(mcpAngle, 110, 170);
 
-
-  const ipScore =
-    normalize(
-      ipAngle,
-      100,
-      175
-    );
-
+  const ipScore = normalize(ipAngle, 100, 175);
 
   /*
   |--------------------------------------------------------------------------
@@ -548,13 +330,7 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const spreadScore =
-    normalize(
-      thumbSpread,
-      0.30,
-      0.85
-    );
-
+  const spreadScore = normalize(thumbSpread, 0.3, 0.85);
 
   /*
   |--------------------------------------------------------------------------
@@ -566,11 +342,7 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const confidence =
-    mcpScore * 0.35 +
-    ipScore * 0.15 +
-    spreadScore * 0.50;
-
+  const confidence = mcpScore * 0.35 + ipScore * 0.15 + spreadScore * 0.5;
 
   /*
   |--------------------------------------------------------------------------
@@ -583,20 +355,13 @@ function detectThumb(
   |--------------------------------------------------------------------------
   */
 
-  const extended =
-    mcpAngle >= 125 &&
-    thumbSpread >= 0.38 &&
-    confidence >= 0.55;
-
+  const extended = mcpAngle >= 125 && thumbSpread >= 0.38 && confidence >= 0.55;
 
   return {
-
     extended,
 
     confidence,
-
   };
-
 }
 
 /*
@@ -605,21 +370,14 @@ function detectThumb(
 |--------------------------------------------------------------------------
 */
 
-export function detectFingers(
-  hand: HandLandmarks
-): FingerState {
-
+export function detectFingers(hand: HandLandmarks): FingerState {
   /*
   |--------------------------------------------------------------------------
   | THUMB
   |--------------------------------------------------------------------------
   */
 
-  const thumb =
-    detectThumb(
-      hand
-    );
-
+  const thumb = detectThumb(hand);
 
   /*
   |--------------------------------------------------------------------------
@@ -627,15 +385,7 @@ export function detectFingers(
   |--------------------------------------------------------------------------
   */
 
-  const index =
-    detectFinger(
-      hand,
-      5,
-      6,
-      7,
-      8
-    );
-
+  const index = detectFinger(hand, 5, 6, 7, 8);
 
   /*
   |--------------------------------------------------------------------------
@@ -643,15 +393,7 @@ export function detectFingers(
   |--------------------------------------------------------------------------
   */
 
-  const middle =
-    detectFinger(
-      hand,
-      9,
-      10,
-      11,
-      12
-    );
-
+  const middle = detectFinger(hand, 9, 10, 11, 12);
 
   /*
   |--------------------------------------------------------------------------
@@ -659,15 +401,7 @@ export function detectFingers(
   |--------------------------------------------------------------------------
   */
 
-  const ring =
-    detectFinger(
-      hand,
-      13,
-      14,
-      15,
-      16
-    );
-
+  const ring = detectFinger(hand, 13, 14, 15, 16);
 
   /*
   |--------------------------------------------------------------------------
@@ -675,15 +409,7 @@ export function detectFingers(
   |--------------------------------------------------------------------------
   */
 
-  const pinky =
-    detectFinger(
-      hand,
-      17,
-      18,
-      19,
-      20
-    );
-
+  const pinky = detectFinger(hand, 17, 18, 19, 20);
 
   /*
   |--------------------------------------------------------------------------
@@ -692,22 +418,11 @@ export function detectFingers(
   */
 
   const count =
-    Number(
-      thumb.extended
-    ) +
-    Number(
-      index.extended
-    ) +
-    Number(
-      middle.extended
-    ) +
-    Number(
-      ring.extended
-    ) +
-    Number(
-      pinky.extended
-    );
-
+    Number(thumb.extended) +
+    Number(index.extended) +
+    Number(middle.extended) +
+    Number(ring.extended) +
+    Number(pinky.extended);
 
   /*
   |--------------------------------------------------------------------------
@@ -721,7 +436,6 @@ export function detectFingers(
   */
 
   return {
-
     thumb,
 
     index,
@@ -734,12 +448,8 @@ export function detectFingers(
 
     count,
 
-    landmarks:
-      hand.landmarks,
+    landmarks: hand.landmarks,
 
-    handedness:
-      hand.handedness,
-
+    handedness: hand.handedness,
   };
-
 }

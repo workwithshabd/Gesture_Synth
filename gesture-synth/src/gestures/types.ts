@@ -1,6 +1,4 @@
-export type Handedness =
-  | "Left"
-  | "Right";
+export type Handedness = "Left" | "Right";
 
 export interface Landmark {
   x: number;

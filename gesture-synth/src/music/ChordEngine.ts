@@ -1,9 +1,4 @@
-import type {
-  ChordQuality,
-  RootNote,
-  ScaleName,
-  TriadQuality,
-} from "./types";
+import type { ChordQuality, RootNote, ScaleName, TriadQuality } from "./types";
 
 import {
   getScaleDegreeRoot,
@@ -12,9 +7,7 @@ import {
   shouldUseFlats,
 } from "./NoteUtils";
 
-import {
-  SCALE_INTERVALS,
-} from "./scales";
+import { SCALE_INTERVALS } from "./scales";
 
 export class ChordEngine {
   /**
@@ -36,31 +29,22 @@ export class ChordEngine {
   getScaleDegreeRoot(
     key: RootNote,
     scale: ScaleName,
-    degree: number
+    degree: number,
   ): RootNote {
-    const intervals =
-      SCALE_INTERVALS[scale];
+    const intervals = SCALE_INTERVALS[scale];
 
     if (degree < 1) {
-      throw new Error(
-        "Scale degree must be at least 1."
-      );
+      throw new Error("Scale degree must be at least 1.");
     }
 
-    return getScaleDegreeRoot(
-      key,
-      intervals,
-      degree
-    );
+    return getScaleDegreeRoot(key, intervals, degree);
   }
 
   /**
    * Convert the left-hand major/minor
    * gesture into a triad quality.
    */
-  getTriadQuality(
-    quality: TriadQuality
-  ): ChordQuality {
+  getTriadQuality(quality: TriadQuality): ChordQuality {
     if (quality === "major") {
       return "major";
     }
@@ -81,7 +65,7 @@ export class ChordEngine {
    */
   getQualityFromRightHand(
     triadQuality: TriadQuality,
-    rightFingerCount: number
+    rightFingerCount: number,
   ): ChordQuality {
     switch (rightFingerCount) {
       case 1:
@@ -120,13 +104,8 @@ export class ChordEngine {
    * - chord transposition
    * - key transposition
    */
-  createChord(
-    root: RootNote,
-    quality: ChordQuality,
-    octave = 4
-  ): string[] {
-    const rootMidi =
-      noteToMidi(root, octave);
+  createChord(root: RootNote, quality: ChordQuality, octave = 4): string[] {
+    const rootMidi = noteToMidi(root, octave);
 
     let intervals: number[];
 
@@ -163,15 +142,10 @@ export class ChordEngine {
         intervals = [0, 4, 7];
     }
 
-    const preferFlats =
-      shouldUseFlats(root);
+    const preferFlats = shouldUseFlats(root);
 
-    return intervals.map(
-      interval =>
-        midiToNote(
-          rootMidi + interval,
-          preferFlats
-        )
+    return intervals.map((interval) =>
+      midiToNote(rootMidi + interval, preferFlats),
     );
   }
 
@@ -188,31 +162,17 @@ export class ChordEngine {
     degree: number,
     leftQuality: TriadQuality,
     rightFingerCount: number,
-    octave = 4
+    octave = 4,
   ): {
     root: RootNote;
     quality: ChordQuality;
     notes: string[];
   } {
-    const root =
-      this.getScaleDegreeRoot(
-        key,
-        scale,
-        degree
-      );
+    const root = this.getScaleDegreeRoot(key, scale, degree);
 
-    const quality =
-      this.getQualityFromRightHand(
-        leftQuality,
-        rightFingerCount
-      );
+    const quality = this.getQualityFromRightHand(leftQuality, rightFingerCount);
 
-    const notes =
-      this.createChord(
-        root,
-        quality,
-        octave
-      );
+    const notes = this.createChord(root, quality, octave);
 
     return {
       root,

@@ -44,21 +44,13 @@ import {
   useState,
 } from "react";
 
-import {
-  CameraView,
-} from "./components/CameraView";
+import { CameraView } from "./components/CameraView";
 
-import type {
-  HandTrackingResult,
-} from "./gestures/types";
+import type { HandTrackingResult } from "./gestures/types";
 
-import {
-  detectFingers,
-} from "./gestures/FingerDetector";
+import { detectFingers } from "./gestures/FingerDetector";
 
-import {
-  useStableFingers,
-} from "./gestures/GestureStabilizer";
+import { useStableFingers } from "./gestures/GestureStabilizer";
 
 import {
   mapLeftGesture,
@@ -68,21 +60,13 @@ import {
   isTransposeGesture,
 } from "./gestures/GestureMapper";
 
-import {
-  useChordSemitoneController,
-} from "./gestures/ChordSemitoneController";
+import { useChordSemitoneController } from "./gestures/ChordSemitoneController";
 
-import {
-  getTiltDirection,
-} from "./gestures/TiltDetector";
+import { getTiltDirection } from "./gestures/TiltDetector";
 
-import {
-  AudioEngine,
-} from "./audio/AudioEngine";
+import { AudioEngine } from "./audio/AudioEngine";
 
-import type {
-  InstrumentType,
-} from "./audio/AudioEngine";
+import type { InstrumentType } from "./audio/AudioEngine";
 
 /*
 |--------------------------------------------------------------------------
@@ -90,24 +74,13 @@ import type {
 |--------------------------------------------------------------------------
 */
 
-type LeftTiltDirection =
-  | "INWARD"
-  | "OUTWARD";
+type LeftTiltDirection = "INWARD" | "OUTWARD";
 
-type RightTiltDirection =
-  | "INWARD"
-  | "OUTWARD"
-  | "NEUTRAL";
+type RightTiltDirection = "INWARD" | "OUTWARD" | "NEUTRAL";
 
-type ChordQuality =
-  | "MAJOR"
-  | "MINOR";
+type ChordQuality = "MAJOR" | "MINOR";
 
-type ChordShape =
-  | "ROOT"
-  | "INVERSION"
-  | "SEVENTH"
-  | "DOMINANT_DIMINISHED";
+type ChordShape = "ROOT" | "INVERSION" | "SEVENTH" | "DOMINANT_DIMINISHED";
 
 /*
 |--------------------------------------------------------------------------
@@ -120,78 +93,43 @@ function getRightPalmAngle(
     x: number;
     y: number;
     z?: number;
-  }[]
+  }[],
 ): number | null {
-
-  if (
-    !landmarks ||
-    landmarks.length < 18
-  ) {
+  if (!landmarks || landmarks.length < 18) {
     return null;
   }
 
-  const indexMcp =
-    landmarks[5];
+  const indexMcp = landmarks[5];
 
-  const pinkyMcp =
-    landmarks[17];
+  const pinkyMcp = landmarks[17];
 
-  if (
-    !indexMcp ||
-    !pinkyMcp
-  ) {
+  if (!indexMcp || !pinkyMcp) {
     return null;
   }
 
-  const dx =
-    pinkyMcp.x -
-    indexMcp.x;
+  const dx = pinkyMcp.x - indexMcp.x;
 
-  const dy =
-    pinkyMcp.y -
-    indexMcp.y;
+  const dy = pinkyMcp.y - indexMcp.y;
 
-  if (
-    !Number.isFinite(dx) ||
-    !Number.isFinite(dy)
-  ) {
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
     return null;
   }
 
-  if (
-    Math.abs(dx) < 0.0001 &&
-    Math.abs(dy) < 0.0001
-  ) {
+  if (Math.abs(dx) < 0.0001 && Math.abs(dy) < 0.0001) {
     return null;
   }
 
-  let angle =
-    Math.atan2(
-      dx,
-      -dy
-    ) *
-    (180 / Math.PI);
+  let angle = Math.atan2(dx, -dy) * (180 / Math.PI);
 
-  if (
-    angle < 0
-  ) {
+  if (angle < 0) {
     angle += 360;
   }
 
-  if (
-    angle > 180
-  ) {
-    angle =
-      360 - angle;
+  if (angle > 180) {
+    angle = 360 - angle;
   }
 
-  return Math.max(
-    0,
-    Math.min(
-      180,
-      angle
-    )
-  );
+  return Math.max(0, Math.min(180, angle));
 }
 
 /*
@@ -200,19 +138,12 @@ function getRightPalmAngle(
 |--------------------------------------------------------------------------
 */
 
-function getRightTiltFromAngle(
-  angle: number
-): RightTiltDirection {
-
-  if (
-    angle >= 120
-  ) {
+function getRightTiltFromAngle(angle: number): RightTiltDirection {
+  if (angle >= 120) {
     return "INWARD";
   }
 
-  if (
-    angle >= 60
-  ) {
+  if (angle >= 60) {
     return "NEUTRAL";
   }
 
@@ -225,45 +156,30 @@ function getRightTiltFromAngle(
 |--------------------------------------------------------------------------
 */
 
-const KEY_OFFSETS:
-  Record<string, number> = {
+const KEY_OFFSETS: Record<string, number> = {
+  C: 0,
 
-  C:
-    0,
+  "C#": 1,
 
-  "C#":
-    1,
+  D: 2,
 
-  D:
-    2,
+  "D#": 3,
 
-  "D#":
-    3,
+  E: 4,
 
-  E:
-    4,
+  F: 5,
 
-  F:
-    5,
+  "F#": 6,
 
-  "F#":
-    6,
+  G: 7,
 
-  G:
-    7,
+  "G#": 8,
 
-  "G#":
-    8,
+  A: 9,
 
-  A:
-    9,
+  "A#": 10,
 
-  "A#":
-    10,
-
-  B:
-    11,
-
+  B: 11,
 };
 
 /*
@@ -273,7 +189,6 @@ const KEY_OFFSETS:
 */
 
 const KEY_NAMES = [
-
   "C",
   "C#",
   "D",
@@ -286,7 +201,6 @@ const KEY_NAMES = [
   "A",
   "A#",
   "B",
-
 ];
 
 /*
@@ -295,59 +209,38 @@ const KEY_NAMES = [
 |--------------------------------------------------------------------------
 */
 
-const SCALE_INTERVALS:
-  Record<string, Record<string, number>> = {
-
+const SCALE_INTERVALS: Record<string, Record<string, number>> = {
   MAJOR: {
+    I: 0,
 
-    I:
-      0,
+    II: 2,
 
-    II:
-      2,
+    III: 4,
 
-    III:
-      4,
+    IV: 5,
 
-    IV:
-      5,
+    V: 7,
 
-    V:
-      7,
+    VI: 9,
 
-    VI:
-      9,
-
-    VII:
-      11,
-
+    VII: 11,
   },
 
   MINOR: {
+    I: 0,
 
-    I:
-      0,
+    II: 2,
 
-    II:
-      2,
+    III: 3,
 
-    III:
-      3,
+    IV: 5,
 
-    IV:
-      5,
+    V: 7,
 
-    V:
-      7,
+    VI: 8,
 
-    VI:
-      8,
-
-    VII:
-      10,
-
+    VII: 10,
   },
-
 };
 
 /*
@@ -356,8 +249,7 @@ const SCALE_INTERVALS:
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_VOLUME =
-  0.30;
+const DEFAULT_VOLUME = 0.3;
 
 /*
 |--------------------------------------------------------------------------
@@ -366,25 +258,16 @@ const DEFAULT_VOLUME =
 */
 
 function App() {
-
   /*
   |--------------------------------------------------------------------------
   | AUDIO ENGINE
   |--------------------------------------------------------------------------
   */
 
-  const audioRef =
-    useRef<AudioEngine | null>(
-      null
-    );
+  const audioRef = useRef<AudioEngine | null>(null);
 
-  if (
-    !audioRef.current
-  ) {
-
-    audioRef.current =
-      new AudioEngine();
-
+  if (!audioRef.current) {
+    audioRef.current = new AudioEngine();
   }
 
   /*
@@ -393,11 +276,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    audioStarted,
-    setAudioStarted,
-  ] =
-    useState(false);
+  const [audioStarted, setAudioStarted] = useState(false);
 
   /*
   |--------------------------------------------------------------------------
@@ -405,17 +284,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    selectedKey,
-    setSelectedKey,
-  ] =
-    useState("C");
+  const [selectedKey, setSelectedKey] = useState("C");
 
-  const [
-    selectedScale,
-    setSelectedScale,
-  ] =
-    useState("MAJOR");
+  const [selectedScale, setSelectedScale] = useState("MAJOR");
 
   /*
   |--------------------------------------------------------------------------
@@ -423,13 +294,8 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    selectedInstrument,
-    setSelectedInstrument,
-  ] =
-    useState<InstrumentType>(
-      "ORGAN"
-    );
+  const [selectedInstrument, setSelectedInstrument] =
+    useState<InstrumentType>("ORGAN");
 
   /*
   |--------------------------------------------------------------------------
@@ -437,11 +303,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    transposeSemitones,
-    setTransposeSemitones,
-  ] =
-    useState(0);
+  const [transposeSemitones, setTransposeSemitones] = useState(0);
 
   /*
   |--------------------------------------------------------------------------
@@ -449,17 +311,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    transposeEnabled,
-    setTransposeEnabled,
-  ] =
-    useState(false);
+  const [transposeEnabled, setTransposeEnabled] = useState(false);
 
-  const [
-    guideOpen,
-    setGuideOpen,
-  ] =
-    useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   /*
   |--------------------------------------------------------------------------
@@ -467,10 +321,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const effectiveTranspose =
-    transposeEnabled
-      ? transposeSemitones
-      : 0;
+  const effectiveTranspose = transposeEnabled ? transposeSemitones : 0;
 
   /*
   |--------------------------------------------------------------------------
@@ -478,44 +329,19 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const effectiveKey =
-    useMemo(() => {
+  const effectiveKey = useMemo(() => {
+    const baseOffset = KEY_OFFSETS[selectedKey];
 
-      const baseOffset =
-        KEY_OFFSETS[
-          selectedKey
-        ];
+    if (baseOffset === undefined) {
+      return selectedKey;
+    }
 
-      if (
-        baseOffset === undefined
-      ) {
+    const rawOffset = baseOffset + effectiveTranspose;
 
-        return selectedKey;
+    const normalizedOffset = ((rawOffset % 12) + 12) % 12;
 
-      }
-
-      const rawOffset =
-        baseOffset +
-        effectiveTranspose;
-
-      const normalizedOffset =
-        (
-          (
-            rawOffset %
-            12
-          ) +
-          12
-        ) %
-        12;
-
-      return KEY_NAMES[
-        normalizedOffset
-      ];
-
-    }, [
-      selectedKey,
-      effectiveTranspose,
-    ]);
+    return KEY_NAMES[normalizedOffset];
+  }, [selectedKey, effectiveTranspose]);
 
   /*
   |--------------------------------------------------------------------------
@@ -529,63 +355,29 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const handleKeyChange =
-    useCallback(
-      (
-        displayedKey: string
-      ) => {
+  const handleKeyChange = useCallback(
+    (displayedKey: string) => {
+      if (!transposeEnabled) {
+        setSelectedKey(displayedKey);
 
-        if (
-          !transposeEnabled
-        ) {
+        return;
+      }
 
-          setSelectedKey(
-            displayedKey
-          );
+      const displayedOffset = KEY_OFFSETS[displayedKey];
 
-          return;
+      if (displayedOffset === undefined) {
+        return;
+      }
 
-        }
+      const baseOffset =
+        (((displayedOffset - transposeSemitones) % 12) + 12) % 12;
 
-        const displayedOffset =
-          KEY_OFFSETS[
-            displayedKey
-          ];
+      const baseKey = KEY_NAMES[baseOffset];
 
-        if (
-          displayedOffset === undefined
-        ) {
-
-          return;
-
-        }
-
-        const baseOffset =
-          (
-            (
-              displayedOffset -
-              transposeSemitones
-            ) %
-            12 +
-            12
-          ) %
-          12;
-
-        const baseKey =
-          KEY_NAMES[
-            baseOffset
-          ];
-
-        setSelectedKey(
-          baseKey
-        );
-
-      },
-      [
-        transposeEnabled,
-        transposeSemitones,
-      ]
-    );
+      setSelectedKey(baseKey);
+    },
+    [transposeEnabled, transposeSemitones],
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -593,20 +385,13 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const [
-    trackingResult,
-    setTrackingResult,
-  ] =
-    useState<HandTrackingResult>({
-      leftHand:
-        null,
+  const [trackingResult, setTrackingResult] = useState<HandTrackingResult>({
+    leftHand: null,
 
-      rightHand:
-        null,
+    rightHand: null,
 
-      timestamp:
-        0,
-    });
+    timestamp: 0,
+  });
 
   /*
   |--------------------------------------------------------------------------
@@ -614,19 +399,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const handleResults =
-    useCallback(
-      (
-        result: HandTrackingResult
-      ) => {
-
-        setTrackingResult(
-          result
-        );
-
-      },
-      []
-    );
+  const handleResults = useCallback((result: HandTrackingResult) => {
+    setTrackingResult(result);
+  }, []);
 
   /*
   |--------------------------------------------------------------------------
@@ -634,52 +409,23 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const startAudio =
-    useCallback(
-      async () => {
+  const startAudio = useCallback(async () => {
+    if (audioStarted) {
+      return;
+    }
 
-        if (
-          audioStarted
-        ) {
-          return;
-        }
+    try {
+      await audioRef.current?.start();
 
-        try {
+      audioRef.current?.setVolume(DEFAULT_VOLUME);
 
-          await audioRef.current
-            ?.start();
+      audioRef.current?.setInstrument(selectedInstrument);
 
-          audioRef.current
-            ?.setVolume(
-              DEFAULT_VOLUME
-            );
-
-          audioRef.current
-            ?.setInstrument(
-              selectedInstrument
-            );
-
-          setAudioStarted(
-            true
-          );
-
-        } catch (
-          error
-        ) {
-
-          console.error(
-            "Audio start failed:",
-            error
-          );
-
-        }
-
-      },
-      [
-        audioStarted,
-        selectedInstrument,
-      ]
-    );
+      setAudioStarted(true);
+    } catch (error) {
+      console.error("Audio start failed:", error);
+    }
+  }, [audioStarted, selectedInstrument]);
 
   /*
   |--------------------------------------------------------------------------
@@ -687,8 +433,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const previousNotesRef =
-    useRef<string>("");
+  const previousNotesRef = useRef<string>("");
 
   /*
   |--------------------------------------------------------------------------
@@ -696,10 +441,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const previousInstrumentRef =
-    useRef<InstrumentType>(
-      selectedInstrument
-    );
+  const previousInstrumentRef = useRef<InstrumentType>(selectedInstrument);
 
   /*
   |--------------------------------------------------------------------------
@@ -708,33 +450,18 @@ function App() {
   */
 
   useEffect(() => {
-
-    if (
-      !audioStarted
-    ) {
-
+    if (!audioStarted) {
       return;
-
     }
 
-    const audio =
-      audioRef.current;
+    const audio = audioRef.current;
 
-    if (
-      !audio
-    ) {
-
+    if (!audio) {
       return;
-
     }
 
-    if (
-      previousInstrumentRef.current ===
-      selectedInstrument
-    ) {
-
+    if (previousInstrumentRef.current === selectedInstrument) {
       return;
-
     }
 
     /*
@@ -751,9 +478,7 @@ function App() {
     |--------------------------------------------------------------------------
     */
 
-    audio.setInstrument(
-      selectedInstrument
-    );
+    audio.setInstrument(selectedInstrument);
 
     /*
     |--------------------------------------------------------------------------
@@ -761,16 +486,10 @@ function App() {
     |--------------------------------------------------------------------------
     */
 
-    previousNotesRef.current =
-      "";
+    previousNotesRef.current = "";
 
-    previousInstrumentRef.current =
-      selectedInstrument;
-
-  }, [
-    selectedInstrument,
-    audioStarted,
-  ]);
+    previousInstrumentRef.current = selectedInstrument;
+  }, [selectedInstrument, audioStarted]);
 
   /*
   |--------------------------------------------------------------------------
@@ -778,24 +497,13 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rawLeft =
-    useMemo(() => {
+  const rawLeft = useMemo(() => {
+    if (!trackingResult.leftHand) {
+      return null;
+    }
 
-      if (
-        !trackingResult.leftHand
-      ) {
-
-        return null;
-
-      }
-
-      return detectFingers(
-        trackingResult.leftHand
-      );
-
-    }, [
-      trackingResult.leftHand,
-    ]);
+    return detectFingers(trackingResult.leftHand);
+  }, [trackingResult.leftHand]);
 
   /*
   |--------------------------------------------------------------------------
@@ -803,24 +511,13 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rawRight =
-    useMemo(() => {
+  const rawRight = useMemo(() => {
+    if (!trackingResult.rightHand) {
+      return null;
+    }
 
-      if (
-        !trackingResult.rightHand
-      ) {
-
-        return null;
-
-      }
-
-      return detectFingers(
-        trackingResult.rightHand
-      );
-
-    }, [
-      trackingResult.rightHand,
-    ]);
+    return detectFingers(trackingResult.rightHand);
+  }, [trackingResult.rightHand]);
 
   /*
   |--------------------------------------------------------------------------
@@ -828,15 +525,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const stableLeft =
-    useStableFingers(
-      rawLeft
-    );
+  const stableLeft = useStableFingers(rawLeft);
 
-  const stableRight =
-    useStableFingers(
-      rawRight
-    );
+  const stableRight = useStableFingers(rawRight);
 
   /*
   |--------------------------------------------------------------------------
@@ -844,18 +535,11 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const leftTilt:
-    LeftTiltDirection =
-    trackingResult.leftHand?.landmarks
-      ? (
-          getTiltDirection(
-            trackingResult.leftHand.landmarks,
-            "Left"
-          ) === "INWARD"
-            ? "INWARD"
-            : "OUTWARD"
-        )
-      : "OUTWARD";
+  const leftTilt: LeftTiltDirection = trackingResult.leftHand?.landmarks
+    ? getTiltDirection(trackingResult.leftHand.landmarks, "Left") === "INWARD"
+      ? "INWARD"
+      : "OUTWARD"
+    : "OUTWARD";
 
   /*
   |--------------------------------------------------------------------------
@@ -863,43 +547,23 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const leftGesture =
-    useMemo(() => {
+  const leftGesture = useMemo(() => {
+    const gesture = mapLeftGesture(stableLeft);
 
-      const gesture =
-        mapLeftGesture(
-          stableLeft
-        );
+    if (!gesture) {
+      return null;
+    }
 
-      if (
-        !gesture
-      ) {
+    const quality: ChordQuality = leftTilt === "INWARD" ? "MINOR" : "MAJOR";
 
-        return null;
+    return {
+      ...gesture,
 
-      }
+      quality,
 
-      const quality:
-        ChordQuality =
-        leftTilt === "INWARD"
-          ? "MINOR"
-          : "MAJOR";
-
-      return {
-
-        ...gesture,
-
-        quality,
-
-        tilt:
-          leftTilt,
-
-      };
-
-    }, [
-      stableLeft,
-      leftTilt,
-    ]);
+      tilt: leftTilt,
+    };
+  }, [stableLeft, leftTilt]);
 
   /*
   |--------------------------------------------------------------------------
@@ -907,16 +571,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rightGesture =
-    useMemo(() => {
-
-      return mapRightGesture(
-        stableRight
-      );
-
-    }, [
-      stableRight,
-    ]);
+  const rightGesture = useMemo(() => {
+    return mapRightGesture(stableRight);
+  }, [stableRight]);
 
   /*
   |--------------------------------------------------------------------------
@@ -924,16 +581,9 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const octave =
-    useMemo(() => {
-
-      return mapOctave(
-        stableRight
-      );
-
-    }, [
-      stableRight,
-    ]);
+  const octave = useMemo(() => {
+    return mapOctave(stableRight);
+  }, [stableRight]);
 
   /*
   |--------------------------------------------------------------------------
@@ -941,10 +591,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const semitoneGestureActive =
-    isChordSemitoneGesture(
-      stableRight
-    );
+  const semitoneGestureActive = isChordSemitoneGesture(stableRight);
 
   /*
   |--------------------------------------------------------------------------
@@ -952,51 +599,25 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const rightTilt =
-    useMemo<RightTiltDirection>(() => {
+  const rightTilt = useMemo<RightTiltDirection>(() => {
+    if (!semitoneGestureActive) {
+      return "NEUTRAL";
+    }
 
-      if (
-        !semitoneGestureActive
-      ) {
+    const landmarks = trackingResult.rightHand?.landmarks;
 
-        return "NEUTRAL";
+    if (!landmarks) {
+      return "NEUTRAL";
+    }
 
-      }
+    const angle = getRightPalmAngle(landmarks);
 
-      const landmarks =
-        trackingResult
-          .rightHand
-          ?.landmarks;
+    if (angle === null) {
+      return "NEUTRAL";
+    }
 
-      if (
-        !landmarks
-      ) {
-
-        return "NEUTRAL";
-
-      }
-
-      const angle =
-        getRightPalmAngle(
-          landmarks
-        );
-
-      if (
-        angle === null
-      ) {
-
-        return "NEUTRAL";
-
-      }
-
-      return getRightTiltFromAngle(
-        angle
-      );
-
-    }, [
-      trackingResult.rightHand,
-      semitoneGestureActive,
-    ]);
+    return getRightTiltFromAngle(angle);
+  }, [trackingResult.rightHand, semitoneGestureActive]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1004,12 +625,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const {
-    chordSemitone,
-  } =
-    useChordSemitoneController(
-      stableRight
-    );
+  const { chordSemitone } = useChordSemitoneController(stableRight);
 
   /*
   |--------------------------------------------------------------------------
@@ -1017,25 +633,18 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const effectiveChordSemitone =
-    semitoneGestureActive
-      ? rightTilt === "INWARD"
-        ? -1
-        : rightTilt === "OUTWARD"
-          ? 1
-          : 0
-      : chordSemitone;
+  const effectiveChordSemitone = semitoneGestureActive
+    ? rightTilt === "INWARD"
+      ? -1
+      : rightTilt === "OUTWARD"
+        ? 1
+        : 0
+    : chordSemitone;
 
-  const safeChordSemitone =
-    Math.max(
-      -1,
-      Math.min(
-        1,
-        Math.round(
-          effectiveChordSemitone
-        )
-      )
-    );
+  const safeChordSemitone = Math.max(
+    -1,
+    Math.min(1, Math.round(effectiveChordSemitone)),
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -1043,10 +652,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const transposeGestureActive =
-    isTransposeGesture(
-      stableRight
-    );
+  const transposeGestureActive = isTransposeGesture(stableRight);
 
   /*
   |--------------------------------------------------------------------------
@@ -1054,56 +660,31 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const transposeGestureTriggeredRef =
-    useRef(false);
+  const transposeGestureTriggeredRef = useRef(false);
 
   useEffect(() => {
-
-    if (
-      !transposeGestureActive
-    ) {
-
-      transposeGestureTriggeredRef.current =
-        false;
+    if (!transposeGestureActive) {
+      transposeGestureTriggeredRef.current = false;
 
       return;
-
     }
 
-    if (
-      transposeGestureTriggeredRef.current
-    ) {
-
+    if (transposeGestureTriggeredRef.current) {
       return;
-
     }
 
-    transposeGestureTriggeredRef.current =
-      true;
+    transposeGestureTriggeredRef.current = true;
 
-    setTransposeEnabled(
-      previous =>
-        !previous
-    );
+    setTransposeEnabled((previous) => !previous);
 
-    console.log(
-      "[TRANSPOSE SWITCH]",
-      {
-        gesture:
-          "THUMB_ALONE",
+    console.log("[TRANSPOSE SWITCH]", {
+      gesture: "THUMB_ALONE",
 
-        action:
-          "TOGGLE",
+      action: "TOGGLE",
 
-        selectedTranspose:
-          transposeSemitones,
-      }
-    );
-
-  }, [
-    transposeGestureActive,
-    transposeSemitones,
-  ]);
+      selectedTranspose: transposeSemitones,
+    });
+  }, [transposeGestureActive, transposeSemitones]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1111,12 +692,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const octaveOffset =
-    octave === "HIGHER"
-      ? 12
-      : octave === "LOWER"
-        ? -12
-        : 0;
+  const octaveOffset = octave === "HIGHER" ? 12 : octave === "LOWER" ? -12 : 0;
 
   /*
   |--------------------------------------------------------------------------
@@ -1124,48 +700,23 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const volume =
-    useMemo(() => {
+  const volume = useMemo(() => {
+    const landmarks = trackingResult.rightHand?.landmarks;
 
-      const landmarks =
-        trackingResult
-          .rightHand
-          ?.landmarks;
+    if (!landmarks || landmarks.length === 0) {
+      return DEFAULT_VOLUME;
+    }
 
-      if (
-        !landmarks ||
-        landmarks.length === 0
-      ) {
+    const wrist = landmarks[0];
 
-        return DEFAULT_VOLUME;
+    if (!wrist) {
+      return DEFAULT_VOLUME;
+    }
 
-      }
+    const raw = 1 - wrist.y;
 
-      const wrist =
-        landmarks[0];
-
-      if (
-        !wrist
-      ) {
-
-        return DEFAULT_VOLUME;
-
-      }
-
-      const raw =
-        1 - wrist.y;
-
-      return Math.max(
-        0,
-        Math.min(
-          1,
-          raw
-        )
-      );
-
-    }, [
-      trackingResult.rightHand,
-    ]);
+    return Math.max(0, Math.min(1, raw));
+  }, [trackingResult.rightHand]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1173,54 +724,37 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const notes =
-    useMemo(() => {
+  const notes = useMemo(() => {
+    if (!leftGesture) {
+      return [];
+    }
 
-      if (
-        !leftGesture
-      ) {
+    return generateChordNotes({
+      degree: leftGesture.degree,
 
-        return [];
+      quality: leftGesture.quality,
 
-      }
+      shape: rightGesture?.shape ?? "ROOT",
 
-      return generateChordNotes({
+      key: selectedKey,
 
-        degree:
-          leftGesture.degree,
+      scale: selectedScale,
 
-        quality:
-          leftGesture.quality,
+      chordSemitone: safeChordSemitone,
 
-        shape:
-          rightGesture?.shape ??
-          "ROOT",
+      transpose: effectiveTranspose,
 
-        key:
-          selectedKey,
-
-        scale:
-          selectedScale,
-
-        chordSemitone:
-          safeChordSemitone,
-
-        transpose:
-          effectiveTranspose,
-
-        octaveOffset,
-
-      });
-
-    }, [
-      leftGesture,
-      rightGesture,
-      selectedKey,
-      selectedScale,
-      safeChordSemitone,
-      effectiveTranspose,
       octaveOffset,
-    ]);
+    });
+  }, [
+    leftGesture,
+    rightGesture,
+    selectedKey,
+    selectedScale,
+    safeChordSemitone,
+    effectiveTranspose,
+    octaveOffset,
+  ]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1228,67 +762,34 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const chordName =
-    useMemo(() => {
+  const chordName = useMemo(() => {
+    if (!leftGesture) {
+      return "—";
+    }
 
-      if (
-        !leftGesture
-      ) {
+    const keyOffset = KEY_OFFSETS[selectedKey];
 
-        return "—";
+    const scale = SCALE_INTERVALS[selectedScale];
 
-      }
+    const degreeOffset = scale?.[leftGesture.degree];
 
-      const keyOffset =
-        KEY_OFFSETS[
-          selectedKey
-        ];
+    if (keyOffset === undefined || degreeOffset === undefined) {
+      return "—";
+    }
 
-      const scale =
-        SCALE_INTERVALS[
-          selectedScale
-        ];
+    const midi =
+      60 + keyOffset + degreeOffset + effectiveTranspose + safeChordSemitone;
 
-      const degreeOffset =
-        scale?.[
-          leftGesture.degree
-        ];
+    const note = midiToNoteName(midi);
 
-      if (
-        keyOffset === undefined ||
-        degreeOffset === undefined
-      ) {
-
-        return "—";
-
-      }
-
-      const midi =
-        60 +
-        keyOffset +
-        degreeOffset +
-        effectiveTranspose +
-        safeChordSemitone;
-
-      const note =
-        midiToNoteName(
-          midi
-        );
-
-      return leftGesture.quality ===
-        "MINOR"
-
-        ? `${note} minor`
-
-        : `${note} major`;
-
-    }, [
-      selectedKey,
-      selectedScale,
-      leftGesture,
-      effectiveTranspose,
-      safeChordSemitone,
-    ]);
+    return leftGesture.quality === "MINOR" ? `${note} minor` : `${note} major`;
+  }, [
+    selectedKey,
+    selectedScale,
+    leftGesture,
+    effectiveTranspose,
+    safeChordSemitone,
+  ]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1297,68 +798,36 @@ function App() {
   */
 
   useLayoutEffect(() => {
-
-    if (
-      !audioStarted
-    ) {
-
+    if (!audioStarted) {
       return;
-
     }
 
-    const audio =
-      audioRef.current;
+    const audio = audioRef.current;
 
-    if (
-      !audio
-    ) {
-
+    if (!audio) {
       return;
-
     }
 
-    if (
-      notes.length === 0
-    ) {
-
-      if (
-        previousNotesRef.current !== ""
-      ) {
-
+    if (notes.length === 0) {
+      if (previousNotesRef.current !== "") {
         audio.stop();
 
-        previousNotesRef.current =
-          "";
-
+        previousNotesRef.current = "";
       }
 
       return;
-
     }
 
-    const notesKey =
-      notes.join("|");
+    const notesKey = notes.join("|");
 
-    if (
-      notesKey ===
-      previousNotesRef.current
-    ) {
-
+    if (notesKey === previousNotesRef.current) {
       return;
-
     }
 
-    audio.play(
-      notes
-    );
+    audio.play(notes);
 
-    previousNotesRef.current =
-      notesKey;
-
-  }, [
-    audioStarted,
-    notes,
-  ]);
+    previousNotesRef.current = notesKey;
+  }, [audioStarted, notes]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1367,24 +836,12 @@ function App() {
   */
 
   useEffect(() => {
-
-    if (
-      !audioStarted
-    ) {
-
+    if (!audioStarted) {
       return;
-
     }
 
-    audioRef.current
-      ?.setVolume(
-        volume
-      );
-
-  }, [
-    audioStarted,
-    volume,
-  ]);
+    audioRef.current?.setVolume(volume);
+  }, [audioStarted, volume]);
 
   /*
   |--------------------------------------------------------------------------
@@ -1392,9 +849,7 @@ function App() {
   |--------------------------------------------------------------------------
   */
 
-  const waveActive =
-    audioStarted &&
-    notes.length > 0;
+  const waveActive = audioStarted && notes.length > 0;
 
   /*
   |--------------------------------------------------------------------------
@@ -1403,35 +858,26 @@ function App() {
   */
 
   return (
-
     <main
       style={{
-        position:
-          "fixed",
+        position: "fixed",
 
-        inset:
-          0,
+        inset: 0,
 
-        width:
-          "100vw",
+        width: "100vw",
 
-        height:
-          "100vh",
+        height: "100vh",
 
-        overflow:
-          "hidden",
+        overflow: "hidden",
 
-        background:
-          "#050505",
+        background: "#050505",
 
-        color:
-          "#fff",
+        color: "#fff",
 
         fontFamily:
           "Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-
       {/* ========================================================== */}
       {/* FULLSCREEN CAMERA */}
       {/* ========================================================== */}
@@ -1439,38 +885,27 @@ function App() {
       <div
         className="camera-fullscreen"
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          inset:
-            0,
+          inset: 0,
 
-          zIndex:
-            0,
+          zIndex: 0,
 
-          width:
-            "100vw",
+          width: "100vw",
 
-          height:
-            "100vh",
+          height: "100vh",
 
-          minWidth:
-            "100vw",
+          minWidth: "100vw",
 
-          minHeight:
-            "100vh",
+          minHeight: "100vh",
 
-          overflow:
-            "hidden",
+          overflow: "hidden",
 
-          margin:
-            0,
+          margin: 0,
 
-          padding:
-            0,
+          padding: 0,
         }}
       >
-
         <style>
           {`
             .camera-fullscreen,
@@ -1503,16 +938,7 @@ function App() {
           `}
         </style>
 
-        <CameraView
-          onResults={
-            handleResults
-          }
-
-          trackingResult={
-            trackingResult
-          }
-        />
-
+        <CameraView onResults={handleResults} trackingResult={trackingResult} />
       </div>
 
       {/* ========================================================== */}
@@ -1521,17 +947,13 @@ function App() {
 
       <div
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          inset:
-            0,
+          inset: 0,
 
-          zIndex:
-            1,
+          zIndex: 1,
 
-          pointerEvents:
-            "none",
+          pointerEvents: "none",
 
           background:
             "linear-gradient(to bottom, rgba(0,0,0,0.48) 0%, rgba(0,0,0,0.08) 35%, rgba(0,0,0,0.12) 58%, rgba(0,0,0,0.88) 100%)",
@@ -1544,59 +966,42 @@ function App() {
 
       <div
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          top:
-            "18px",
+          top: "18px",
 
-          left:
-            "18px",
+          left: "18px",
 
-          zIndex:
-            10,
+          zIndex: 10,
 
-          display:
-            "flex",
+          display: "flex",
 
-          alignItems:
-            "center",
+          alignItems: "center",
 
-          gap:
-            "2px",
+          gap: "2px",
 
-          padding:
-            "5px",
+          padding: "5px",
 
-          borderRadius:
-            "14px",
+          borderRadius: "14px",
 
-          background:
-            "rgba(10,10,10,0.70)",
+          background: "rgba(10,10,10,0.70)",
 
-          border:
-            "1px solid rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.10)",
 
-          backdropFilter:
-            "blur(22px)",
+          backdropFilter: "blur(22px)",
 
-          WebkitBackdropFilter:
-            "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
 
-          boxShadow:
-            "0 12px 45px rgba(0,0,0,0.35)",
+          boxShadow: "0 12px 45px rgba(0,0,0,0.35)",
         }}
       >
-
         {/* ======================================================== */}
         {/* KEY */}
         {/* ======================================================== */}
 
         <InstrumentSelect
           label="KEY"
-          value={
-            effectiveKey
-          }
+          value={effectiveKey}
           options={[
             "C",
             "C#",
@@ -1611,9 +1016,7 @@ function App() {
             "A#",
             "B",
           ]}
-          onChange={
-            handleKeyChange
-          }
+          onChange={handleKeyChange}
         />
 
         {/* ======================================================== */}
@@ -1622,16 +1025,9 @@ function App() {
 
         <InstrumentSelect
           label="SCALE"
-          value={
-            selectedScale
-          }
-          options={[
-            "MAJOR",
-            "MINOR",
-          ]}
-          onChange={
-            setSelectedScale
-          }
+          value={selectedScale}
+          options={["MAJOR", "MINOR"]}
+          onChange={setSelectedScale}
         />
 
         {/* ======================================================== */}
@@ -1640,19 +1036,9 @@ function App() {
 
         <InstrumentSelect
           label="INSTRUMENT"
-          value={
-            selectedInstrument
-          }
-          options={[
-            "ORGAN",
-            "RHODES",
-          ]}
-          onChange={
-            value =>
-              setSelectedInstrument(
-                value as InstrumentType
-              )
-          }
+          value={selectedInstrument}
+          options={["ORGAN", "RHODES"]}
+          onChange={(value) => setSelectedInstrument(value as InstrumentType)}
         />
 
         {/* ======================================================== */}
@@ -1660,15 +1046,9 @@ function App() {
         {/* ======================================================== */}
 
         <TransposeSelector
-          value={
-            transposeSemitones
-          }
-          enabled={
-            transposeEnabled
-          }
-          onChange={
-            setTransposeSemitones
-          }
+          value={transposeSemitones}
+          enabled={transposeEnabled}
+          onChange={setTransposeSemitones}
         />
 
         {/* ======================================================== */}
@@ -1678,55 +1058,37 @@ function App() {
         <button
           type="button"
           aria-label="Open guide"
-          onClick={() =>
-            setGuideOpen(
-              true
-            )
-          }
+          onClick={() => setGuideOpen(true)}
           style={{
-            width:
-              "30px",
+            width: "30px",
 
-            height:
-              "30px",
+            height: "30px",
 
-            marginLeft:
-              "3px",
+            marginLeft: "3px",
 
-            display:
-              "flex",
+            display: "flex",
 
-            alignItems:
-              "center",
+            alignItems: "center",
 
-            justifyContent:
-              "center",
+            justifyContent: "center",
 
-            borderRadius:
-              "9px",
+            borderRadius: "9px",
 
-            border:
-              "1px solid rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.08)",
 
-            background:
-              "rgba(255,255,255,0.055)",
+            background: "rgba(255,255,255,0.055)",
 
-            color:
-              "rgba(255,255,255,0.75)",
+            color: "rgba(255,255,255,0.75)",
 
-            fontSize:
-              "14px",
+            fontSize: "14px",
 
-            fontWeight:
-              700,
+            fontWeight: 700,
 
-            cursor:
-              "pointer",
+            cursor: "pointer",
           }}
         >
           ?
         </button>
-
       </div>
 
       {/* ========================================================== */}
@@ -1735,78 +1097,54 @@ function App() {
 
       <div
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          top:
-            "18px",
+          top: "18px",
 
-          right:
-            "18px",
+          right: "18px",
 
-          zIndex:
-            20,
+          zIndex: 20,
 
-          display:
-            "flex",
+          display: "flex",
 
-          alignItems:
-            "center",
+          alignItems: "center",
 
-          gap:
-            "12px",
+          gap: "12px",
 
-          width:
-            "260px",
+          width: "260px",
 
-          minHeight:
-            "46px",
+          minHeight: "46px",
 
-          padding:
-            "10px 14px",
+          padding: "10px 14px",
 
-          boxSizing:
-            "border-box",
+          boxSizing: "border-box",
 
-          borderRadius:
-            "14px",
+          borderRadius: "14px",
 
-          background:
-            "rgba(10,10,10,0.78)",
+          background: "rgba(10,10,10,0.78)",
 
-          border:
-            "1px solid rgba(255,255,255,0.12)",
+          border: "1px solid rgba(255,255,255,0.12)",
 
-          backdropFilter:
-            "blur(22px)",
+          backdropFilter: "blur(22px)",
 
-          WebkitBackdropFilter:
-            "blur(22px)",
+          WebkitBackdropFilter: "blur(22px)",
 
-          boxShadow:
-            "0 12px 45px rgba(0,0,0,0.40)",
+          boxShadow: "0 12px 45px rgba(0,0,0,0.40)",
 
-          pointerEvents:
-            "none",
+          pointerEvents: "none",
         }}
       >
-
         <span
           style={{
-            fontSize:
-              "10px",
+            fontSize: "10px",
 
-            fontWeight:
-              700,
+            fontWeight: 700,
 
-            letterSpacing:
-              "0.12em",
+            letterSpacing: "0.12em",
 
-            opacity:
-              0.48,
+            opacity: 0.48,
 
-            whiteSpace:
-              "nowrap",
+            whiteSpace: "nowrap",
           }}
         >
           VOLUME
@@ -1814,76 +1152,53 @@ function App() {
 
         <div
           style={{
-            flex:
-              1,
+            flex: 1,
 
-            width:
-              "150px",
+            width: "150px",
 
-            height:
-              "10px",
+            height: "10px",
 
-            borderRadius:
-              "999px",
+            borderRadius: "999px",
 
-            overflow:
-              "hidden",
+            overflow: "hidden",
 
-            background:
-              "rgba(255,255,255,0.12)",
+            background: "rgba(255,255,255,0.12)",
 
-            boxShadow:
-              "inset 0 0 0 1px rgba(255,255,255,0.05)",
+            boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.05)",
           }}
         >
-
           <div
             style={{
-              width:
-                `${Math.round(volume * 100)}%`,
+              width: `${Math.round(volume * 100)}%`,
 
-              height:
-                "100%",
+              height: "100%",
 
-              borderRadius:
-                "999px",
+              borderRadius: "999px",
 
-              background:
-                "rgba(255,255,255,0.90)",
+              background: "rgba(255,255,255,0.90)",
 
-              transition:
-                "width 45ms linear",
+              transition: "width 45ms linear",
             }}
           />
-
         </div>
 
         <span
           style={{
-            minWidth:
-              "38px",
+            minWidth: "38px",
 
-            fontSize:
-              "11px",
+            fontSize: "11px",
 
-            fontWeight:
-              650,
+            fontWeight: 650,
 
-            fontVariantNumeric:
-              "tabular-nums",
+            fontVariantNumeric: "tabular-nums",
 
-            textAlign:
-              "right",
+            textAlign: "right",
 
-            opacity:
-              0.68,
+            opacity: 0.68,
           }}
         >
-          {Math.round(
-            volume * 100
-          )}%
+          {Math.round(volume * 100)}%
         </span>
-
       </div>
 
       {/* ========================================================== */}
@@ -1892,118 +1207,80 @@ function App() {
 
       <div
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          left:
-            0,
+          left: 0,
 
-          right:
-            0,
+          right: 0,
 
-          bottom:
-            "185px",
+          bottom: "185px",
 
-          zIndex:
-            5,
+          zIndex: 5,
 
-          display:
-            "flex",
+          display: "flex",
 
-          flexDirection:
-            "column",
+          flexDirection: "column",
 
-          alignItems:
-            "center",
+          alignItems: "center",
 
-          justifyContent:
-            "flex-end",
+          justifyContent: "flex-end",
 
-          pointerEvents:
-            "none",
+          pointerEvents: "none",
 
-          textAlign:
-            "center",
+          textAlign: "center",
 
-          padding:
-            "20px",
+          padding: "20px",
 
-          boxSizing:
-            "border-box",
+          boxSizing: "border-box",
         }}
       >
-
         {!audioStarted ? (
-
           <button
             type="button"
-            onClick={
-              startAudio
-            }
+            onClick={startAudio}
             style={{
-              pointerEvents:
-                "auto",
+              pointerEvents: "auto",
 
-              padding:
-                "14px 28px",
+              padding: "14px 28px",
 
-              borderRadius:
-                "999px",
+              borderRadius: "999px",
 
-              border:
-                "1px solid rgba(255,255,255,0.16)",
+              border: "1px solid rgba(255,255,255,0.16)",
 
-              background:
-                "rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.10)",
 
-              color:
-                "#fff",
+              color: "#fff",
 
-              fontSize:
-                "14px",
+              fontSize: "14px",
 
-              fontWeight:
-                600,
+              fontWeight: 600,
 
-              cursor:
-                "pointer",
+              cursor: "pointer",
 
-              backdropFilter:
-                "blur(18px)",
+              backdropFilter: "blur(18px)",
 
-              WebkitBackdropFilter:
-                "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
 
-              boxShadow:
-                "0 15px 45px rgba(0,0,0,0.30)",
+              boxShadow: "0 15px 45px rgba(0,0,0,0.30)",
             }}
           >
             Start Instrument
           </button>
-
         ) : (
-
           <>
-
             <div
               style={{
-                fontSize:
-                  "clamp(42px, 7vw, 82px)",
+                fontSize: "clamp(42px, 7vw, 82px)",
 
-                lineHeight:
-                  0.9,
+                lineHeight: 0.9,
 
-                fontWeight:
-                  700,
+                fontWeight: 700,
 
-                letterSpacing:
-                  "-0.06em",
+                letterSpacing: "-0.06em",
 
-                whiteSpace:
-                  "nowrap",
+                whiteSpace: "nowrap",
 
-                textShadow:
-                  "0 5px 45px rgba(0,0,0,0.65)",
+                textShadow: "0 5px 45px rgba(0,0,0,0.65)",
               }}
             >
               {chordName}
@@ -2011,49 +1288,33 @@ function App() {
 
             <div
               style={{
-                marginTop:
-                  "8px",
+                marginTop: "8px",
 
-                fontSize:
-                  "11px",
+                fontSize: "11px",
 
-                fontWeight:
-                  600,
+                fontWeight: 600,
 
-                letterSpacing:
-                  "0.14em",
+                letterSpacing: "0.14em",
 
-                opacity:
-                  transposeEnabled
-                    ? 0.55
-                    : 0.30,
+                opacity: transposeEnabled ? 0.55 : 0.3,
               }}
             >
               KEY {effectiveKey}
               {" · "}
-              {transposeEnabled
-                ? "TRANSPOSE ON"
-                : "TRANSPOSE OFF"}
+              {transposeEnabled ? "TRANSPOSE ON" : "TRANSPOSE OFF"}
             </div>
 
             <div
               style={{
-                marginTop:
-                  "9px",
+                marginTop: "9px",
 
-                fontSize:
-                  "15px",
+                fontSize: "15px",
 
-                fontWeight:
-                  500,
+                fontWeight: 500,
 
-                letterSpacing:
-                  "0.16em",
+                letterSpacing: "0.16em",
 
-                opacity:
-                  leftGesture
-                    ? 0.62
-                    : 0.20,
+                opacity: leftGesture ? 0.62 : 0.2,
               }}
             >
               {leftGesture?.degree ?? "—"}
@@ -2061,36 +1322,23 @@ function App() {
 
             <div
               style={{
-                marginTop:
-                  "9px",
+                marginTop: "9px",
 
-                minHeight:
-                  "18px",
+                minHeight: "18px",
 
-                fontSize:
-                  "11px",
+                fontSize: "11px",
 
-                fontWeight:
-                  500,
+                fontWeight: 500,
 
-                letterSpacing:
-                  "0.14em",
+                letterSpacing: "0.14em",
 
-                opacity:
-                  notes.length > 0
-                    ? 0.48
-                    : 0.14,
+                opacity: notes.length > 0 ? 0.48 : 0.14,
               }}
             >
-              {notes.length > 0
-                ? notes.join("   ")
-                : "—"}
+              {notes.length > 0 ? notes.join("   ") : "—"}
             </div>
-
           </>
-
         )}
-
       </div>
 
       {/* ========================================================== */}
@@ -2099,63 +1347,34 @@ function App() {
 
       <div
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          left:
-            0,
+          left: 0,
 
-          right:
-            0,
+          right: 0,
 
-          bottom:
-            0,
+          bottom: 0,
 
-          height:
-            "190px",
+          height: "190px",
 
-          zIndex:
-            6,
+          zIndex: 6,
 
-          pointerEvents:
-            "none",
+          pointerEvents: "none",
 
-          opacity:
-            waveActive
-              ? 0.95
-              : 0.28,
+          opacity: waveActive ? 0.95 : 0.28,
 
-          overflow:
-            "hidden",
+          overflow: "hidden",
         }}
       >
-
-        <Waveform
-          active={
-            waveActive
-          }
-        />
-
+        <Waveform active={waveActive} />
       </div>
 
       {/* ========================================================== */}
       {/* GUIDE */}
       {/* ========================================================== */}
 
-      {guideOpen && (
-
-        <Guide
-          onClose={() =>
-            setGuideOpen(
-              false
-            )
-          }
-        />
-
-      )}
-
+      {guideOpen && <Guide onClose={() => setGuideOpen(false)} />}
     </main>
-
   );
 }
 
@@ -2171,137 +1390,87 @@ function InstrumentSelect({
   options,
   onChange,
 }: {
-  label:
-    string;
+  label: string;
 
-  value:
-    string;
+  value: string;
 
-  options:
-    string[];
+  options: string[];
 
-  onChange:
-    (value: string) => void;
-
+  onChange: (value: string) => void;
 }) {
-
   return (
-
     <label
       style={{
-        display:
-          "flex",
+        display: "flex",
 
-        alignItems:
-          "center",
+        alignItems: "center",
 
-        gap:
-          "7px",
+        gap: "7px",
 
-        padding:
-          "7px 9px",
+        padding: "7px 9px",
 
-        borderRadius:
-          "9px",
+        borderRadius: "9px",
 
-        cursor:
-          "pointer",
+        cursor: "pointer",
 
-        whiteSpace:
-          "nowrap",
+        whiteSpace: "nowrap",
       }}
     >
-
       <span
         style={{
-          fontSize:
-            "8px",
+          fontSize: "8px",
 
-          fontWeight:
-            700,
+          fontWeight: 700,
 
-          letterSpacing:
-            "0.12em",
+          letterSpacing: "0.12em",
 
-          opacity:
-            0.35,
+          opacity: 0.35,
         }}
       >
         {label}
       </span>
 
       <select
-        value={
-          value
-        }
-        onChange={
-          event =>
-            onChange(
-              event.target.value
-            )
-        }
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         style={{
-          appearance:
-            "none",
+          appearance: "none",
 
-          WebkitAppearance:
-            "none",
+          WebkitAppearance: "none",
 
-          border:
-            "none",
+          border: "none",
 
-          outline:
-            "none",
+          outline: "none",
 
-          background:
-            "transparent",
+          background: "transparent",
 
-          color:
-            "#fff",
+          color: "#fff",
 
-          fontFamily:
-            "inherit",
+          fontFamily: "inherit",
 
-          fontSize:
-            "12px",
+          fontSize: "12px",
 
-          fontWeight:
-            600,
+          fontWeight: 600,
 
-          cursor:
-            "pointer",
+          cursor: "pointer",
 
-          padding:
-            0,
+          padding: 0,
         }}
       >
+        {options.map((option) => (
+          <option
+            key={option}
+            value={option}
+            style={{
+              background: "#161616",
 
-        {options.map(
-          option => (
-
-            <option
-              key={
-                option
-              }
-              value={
-                option
-              }
-              style={{
-                background:
-                  "#161616",
-
-                color:
-                  "#fff",
-              }}
-            >
-              {option}
-            </option>
-
-          )
-        )}
-
+              color: "#fff",
+            }}
+          >
+            {option}
+          </option>
+        ))}
       </select>
-
     </label>
   );
 }
@@ -2317,91 +1486,53 @@ function TransposeSelector({
   enabled,
   onChange,
 }: {
-  value:
-    number;
+  value: number;
 
-  enabled:
-    boolean;
+  enabled: boolean;
 
-  onChange:
-    (value: number) => void;
-
+  onChange: (value: number) => void;
 }) {
+  const decrease = () => {
+    onChange(Math.max(-12, value - 1));
+  };
 
-  const decrease =
-    () => {
-
-      onChange(
-        Math.max(
-          -12,
-          value - 1
-        )
-      );
-
-    };
-
-  const increase =
-    () => {
-
-      onChange(
-        Math.min(
-          12,
-          value + 1
-        )
-      );
-
-    };
+  const increase = () => {
+    onChange(Math.min(12, value + 1));
+  };
 
   return (
-
     <div
       style={{
-        display:
-          "flex",
+        display: "flex",
 
-        alignItems:
-          "center",
+        alignItems: "center",
 
-        gap:
-          "5px",
+        gap: "5px",
 
-        padding:
-          "4px 6px",
+        padding: "4px 6px",
 
-        borderRadius:
-          "10px",
+        borderRadius: "10px",
 
-        background:
-          enabled
-            ? "rgba(255,255,255,0.09)"
-            : "rgba(255,255,255,0.045)",
+        background: enabled
+          ? "rgba(255,255,255,0.09)"
+          : "rgba(255,255,255,0.045)",
       }}
     >
-
       <span
         style={{
-          marginLeft:
-            "3px",
+          marginLeft: "3px",
 
-          marginRight:
-            "3px",
+          marginRight: "3px",
 
-          fontSize:
-            "8px",
+          fontSize: "8px",
 
-          fontWeight:
-            700,
+          fontWeight: 700,
 
-          letterSpacing:
-            "0.12em",
+          letterSpacing: "0.12em",
 
-          opacity:
-            enabled
-              ? 0.60
-              : 0.35,
+          opacity: enabled ? 0.6 : 0.35,
 
-          whiteSpace:
-            "nowrap",
+          whiteSpace: "nowrap",
         }}
       >
         TRANSPOSE
@@ -2409,202 +1540,120 @@ function TransposeSelector({
 
       <button
         type="button"
-        onClick={
-          decrease
-        }
-        disabled={
-          value <= -12
-        }
+        onClick={decrease}
+        disabled={value <= -12}
         style={{
-          width:
-            "22px",
+          width: "22px",
 
-          height:
-            "22px",
+          height: "22px",
 
-          border:
-            "none",
+          border: "none",
 
-          borderRadius:
-            "6px",
+          borderRadius: "6px",
 
-          background:
-            "rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.06)",
 
-          color:
-            "rgba(255,255,255,0.75)",
+          color: "rgba(255,255,255,0.75)",
 
-          cursor:
-            value <= -12
-              ? "default"
-              : "pointer",
+          cursor: value <= -12 ? "default" : "pointer",
 
-          opacity:
-            value <= -12
-              ? 0.25
-              : 1,
+          opacity: value <= -12 ? 0.25 : 1,
 
-          fontSize:
-            "15px",
+          fontSize: "15px",
 
-          lineHeight:
-            1,
+          lineHeight: 1,
         }}
       >
         −
       </button>
 
       <select
-        value={
-          value
-        }
-        onChange={
-          event =>
-            onChange(
-              Number(
-                event.target.value
-              )
-            )
-        }
+        value={value}
+        onChange={(event) => onChange(Number(event.target.value))}
         aria-label="Transpose amount"
         style={{
-          appearance:
-            "none",
+          appearance: "none",
 
-          WebkitAppearance:
-            "none",
+          WebkitAppearance: "none",
 
-          minWidth:
-            "38px",
+          minWidth: "38px",
 
-          padding:
-            "2px 0",
+          padding: "2px 0",
 
-          border:
-            "none",
+          border: "none",
 
-          outline:
-            "none",
+          outline: "none",
 
-          background:
-            "transparent",
+          background: "transparent",
 
-          color:
-            enabled
-              ? "#fff"
-              : "rgba(255,255,255,0.55)",
+          color: enabled ? "#fff" : "rgba(255,255,255,0.55)",
 
-          fontFamily:
-            "inherit",
+          fontFamily: "inherit",
 
-          fontSize:
-            "12px",
+          fontSize: "12px",
 
-          fontWeight:
-            650,
+          fontWeight: 650,
 
-          textAlign:
-            "center",
+          textAlign: "center",
 
-          cursor:
-            "pointer",
+          cursor: "pointer",
         }}
       >
-
         {Array.from(
           {
-            length:
-              25,
+            length: 25,
           },
-          (
-            _,
-            index
-          ) => {
+          (_, index) => {
+            const transpose = index - 12;
 
-            const transpose =
-              index - 12;
-
-            const label =
-              transpose > 0
-                ? `+${transpose}`
-                : `${transpose}`;
+            const label = transpose > 0 ? `+${transpose}` : `${transpose}`;
 
             return (
-
               <option
-                key={
-                  transpose
-                }
-                value={
-                  transpose
-                }
+                key={transpose}
+                value={transpose}
                 style={{
-                  background:
-                    "#161616",
+                  background: "#161616",
 
-                  color:
-                    "#fff",
+                  color: "#fff",
                 }}
               >
                 {label}
               </option>
-
             );
-
-          }
+          },
         )}
-
       </select>
 
       <button
         type="button"
-        onClick={
-          increase
-        }
-        disabled={
-          value >= 12
-        }
+        onClick={increase}
+        disabled={value >= 12}
         style={{
-          width:
-            "22px",
+          width: "22px",
 
-          height:
-            "22px",
+          height: "22px",
 
-          border:
-            "none",
+          border: "none",
 
-          borderRadius:
-            "6px",
+          borderRadius: "6px",
 
-          background:
-            "rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.06)",
 
-          color:
-            "rgba(255,255,255,0.75)",
+          color: "rgba(255,255,255,0.75)",
 
-          cursor:
-            value >= 12
-              ? "default"
-              : "pointer",
+          cursor: value >= 12 ? "default" : "pointer",
 
-          opacity:
-            value >= 12
-              ? 0.25
-              : 1,
+          opacity: value >= 12 ? 0.25 : 1,
 
-          fontSize:
-            "15px",
+          fontSize: "15px",
 
-          lineHeight:
-            1,
+          lineHeight: 1,
         }}
       >
         +
       </button>
-
     </div>
-
   );
 }
 
@@ -2614,116 +1663,73 @@ function TransposeSelector({
 |--------------------------------------------------------------------------
 */
 
-function Guide({
-  onClose,
-}: {
-  onClose:
-    () => void;
-
-}) {
-
+function Guide({ onClose }: { onClose: () => void }) {
   return (
-
     <div
       style={{
-        position:
-          "absolute",
+        position: "absolute",
 
-        inset:
-          0,
+        inset: 0,
 
-        zIndex:
-          100,
+        zIndex: 100,
 
-        display:
-          "flex",
+        display: "flex",
 
-        alignItems:
-          "center",
+        alignItems: "center",
 
-        justifyContent:
-          "center",
+        justifyContent: "center",
 
-        padding:
-          "20px",
+        padding: "20px",
 
-        background:
-          "rgba(0,0,0,0.62)",
+        background: "rgba(0,0,0,0.62)",
 
-        backdropFilter:
-          "blur(20px)",
+        backdropFilter: "blur(20px)",
 
-        WebkitBackdropFilter:
-          "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
       }}
-      onClick={
-        onClose
-      }
+      onClick={onClose}
     >
-
       <section
-        onClick={
-          event =>
-            event.stopPropagation()
-        }
+        onClick={(event) => event.stopPropagation()}
         style={{
-          width:
-            "min(520px, 100%)",
+          width: "min(520px, 100%)",
 
-          maxHeight:
-            "90vh",
+          maxHeight: "90vh",
 
-          overflowY:
-            "auto",
+          overflowY: "auto",
 
-          boxSizing:
-            "border-box",
+          boxSizing: "border-box",
 
-          padding:
-            "28px",
+          padding: "28px",
 
-          borderRadius:
-            "22px",
+          borderRadius: "22px",
 
-          background:
-            "rgba(18,18,18,0.94)",
+          background: "rgba(18,18,18,0.94)",
 
-          border:
-            "1px solid rgba(255,255,255,0.10)",
+          border: "1px solid rgba(255,255,255,0.10)",
 
-          boxShadow:
-            "0 30px 100px rgba(0,0,0,0.55)",
+          boxShadow: "0 30px 100px rgba(0,0,0,0.55)",
         }}
       >
-
         <div
           style={{
-            display:
-              "flex",
+            display: "flex",
 
-            alignItems:
-              "center",
+            alignItems: "center",
 
-            justifyContent:
-              "space-between",
+            justifyContent: "space-between",
 
-            marginBottom:
-              "25px",
+            marginBottom: "25px",
           }}
         >
-
           <div>
-
             <div
               style={{
-                fontSize:
-                  "22px",
+                fontSize: "22px",
 
-                fontWeight:
-                  700,
+                fontWeight: 700,
 
-                letterSpacing:
-                  "-0.03em",
+                letterSpacing: "-0.03em",
               }}
             >
               Gesture Guide
@@ -2731,215 +1737,113 @@ function Guide({
 
             <div
               style={{
-                marginTop:
-                  "5px",
+                marginTop: "5px",
 
-                fontSize:
-                  "12px",
+                fontSize: "12px",
 
-                opacity:
-                  0.4,
+                opacity: 0.4,
               }}
             >
               Shape the chord with your hands.
             </div>
-
           </div>
 
           <button
             type="button"
-            onClick={
-              onClose
-            }
+            onClick={onClose}
             style={{
-              width:
-                "32px",
+              width: "32px",
 
-              height:
-                "32px",
+              height: "32px",
 
-              borderRadius:
-                "50%",
+              borderRadius: "50%",
 
-              border:
-                "1px solid rgba(255,255,255,0.10)",
+              border: "1px solid rgba(255,255,255,0.10)",
 
-              background:
-                "rgba(255,255,255,0.05)",
+              background: "rgba(255,255,255,0.05)",
 
-              color:
-                "#fff",
+              color: "#fff",
 
-              cursor:
-                "pointer",
+              cursor: "pointer",
 
-              fontSize:
-                "16px",
+              fontSize: "16px",
             }}
           >
             ×
           </button>
-
         </div>
 
         <GuideSection
           title="Left hand · chord"
           rows={[
-            [
-              "Index",
-              "I",
-            ],
-            [
-              "Index + Middle",
-              "II",
-            ],
-            [
-              "Index + Middle + Ring",
-              "III",
-            ],
-            [
-              "Four fingers",
-              "IV",
-            ],
-            [
-              "Five fingers",
-              "V",
-            ],
-            [
-              "Index + Pinky",
-              "VI",
-            ],
-            [
-              "Thumb + Index + Pinky",
-              "VII",
-            ],
+            ["Index", "I"],
+            ["Index + Middle", "II"],
+            ["Index + Middle + Ring", "III"],
+            ["Four fingers", "IV"],
+            ["Five fingers", "V"],
+            ["Index + Pinky", "VI"],
+            ["Thumb + Index + Pinky", "VII"],
           ]}
         />
 
         <GuideSection
           title="Left-hand tilt"
           rows={[
-            [
-              "Inward",
-              "Minor",
-            ],
-            [
-              "Outward",
-              "Major",
-            ],
+            ["Inward", "Minor"],
+            ["Outward", "Major"],
           ]}
         />
 
         <GuideSection
           title="Right hand · shape"
           rows={[
-            [
-              "1 finger",
-              "Root",
-            ],
-            [
-              "2 fingers",
-              "Inversion",
-            ],
-            [
-              "3 fingers",
-              "Seventh",
-            ],
-            [
-              "4 fingers",
-              "Dominant / Diminished",
-            ],
+            ["1 finger", "Root"],
+            ["2 fingers", "Inversion"],
+            ["3 fingers", "Seventh"],
+            ["4 fingers", "Dominant / Diminished"],
           ]}
         />
 
         <GuideSection
           title="Chord semitone"
           rows={[
-            [
-              "Index + Pinky",
-              "Activate",
-            ],
-            [
-              "Inward",
-              "−1",
-            ],
-            [
-              "Neutral",
-              "0",
-            ],
-            [
-              "Outward",
-              "+1",
-            ],
+            ["Index + Pinky", "Activate"],
+            ["Inward", "−1"],
+            ["Neutral", "0"],
+            ["Outward", "+1"],
           ]}
         />
 
         <GuideSection
           title="Transpose switch"
           rows={[
-            [
-              "Thumb alone",
-              "Toggle ON / OFF",
-            ],
-            [
-              "Transpose amount",
-              "Selected from menu",
-            ],
-            [
-              "Gesture direction",
-              "Ignored",
-            ],
-            [
-              "Hold gesture",
-              "No repeat",
-            ],
-            [
-              "Release",
-              "Re-arm switch",
-            ],
+            ["Thumb alone", "Toggle ON / OFF"],
+            ["Transpose amount", "Selected from menu"],
+            ["Gesture direction", "Ignored"],
+            ["Hold gesture", "No repeat"],
+            ["Release", "Re-arm switch"],
           ]}
         />
 
         <GuideSection
           title="Instrument"
           rows={[
-            [
-              "Organ",
-              "Synthesized drawbar organ",
-            ],
-            [
-              "Rhodes",
-              "Electric piano",
-            ],
-            [
-              "Instrument menu",
-              "Switch sound",
-            ],
+            ["Organ", "Synthesized drawbar organ"],
+            ["Rhodes", "Electric piano"],
+            ["Instrument menu", "Switch sound"],
           ]}
         />
 
         <GuideSection
           title="Other controls"
           rows={[
-            [
-              "Thumb",
-              "Lower octave",
-            ],
-            [
-              "Right hand height",
-              "Volume",
-            ],
-            [
-              "Transpose menu",
-              "−12 → +12",
-            ],
+            ["Thumb", "Lower octave"],
+            ["Right hand height", "Volume"],
+            ["Transpose menu", "−12 → +12"],
           ]}
         />
-
       </section>
-
     </div>
-
   );
 }
 
@@ -2953,110 +1857,73 @@ function GuideSection({
   title,
   rows,
 }: {
-  title:
-    string;
+  title: string;
 
-  rows:
-    [string, string][];
-
+  rows: [string, string][];
 }) {
-
   return (
-
     <div
       style={{
-        marginTop:
-          "22px",
+        marginTop: "22px",
       }}
     >
-
       <div
         style={{
-          marginBottom:
-            "9px",
+          marginBottom: "9px",
 
-          fontSize:
-            "10px",
+          fontSize: "10px",
 
-          fontWeight:
-            700,
+          fontWeight: 700,
 
-          letterSpacing:
-            "0.14em",
+          letterSpacing: "0.14em",
 
-          textTransform:
-            "uppercase",
+          textTransform: "uppercase",
 
-          opacity:
-            0.35,
+          opacity: 0.35,
         }}
       >
         {title}
       </div>
 
       <div>
+        {rows.map((row, index) => (
+          <div
+            key={`${row[0]}-${index}`}
+            style={{
+              display: "flex",
 
-        {rows.map(
-          (
-            row,
-            index
-          ) => (
+              alignItems: "center",
 
-            <div
-              key={
-                `${row[0]}-${index}`
-              }
+              justifyContent: "space-between",
+
+              padding: "9px 0",
+
+              borderBottom: "1px solid rgba(255,255,255,0.055)",
+
+              fontSize: "13px",
+            }}
+          >
+            <span
               style={{
-                display:
-                  "flex",
-
-                alignItems:
-                  "center",
-
-                justifyContent:
-                  "space-between",
-
-                padding:
-                  "9px 0",
-
-                borderBottom:
-                  "1px solid rgba(255,255,255,0.055)",
-
-                fontSize:
-                  "13px",
+                opacity: 0.65,
               }}
             >
+              {row[0]}
+            </span>
 
-              <span
-                style={{
-                  opacity:
-                    0.65,
-                }}
-              >
-                {row[0]}
-              </span>
+            <span
+              style={{
+                fontWeight: 600,
 
-              <span
-                style={{
-                  fontWeight:
-                    600,
-
-                  opacity:
-                    0.9,
-                }}
-              >
-                {row[1]}
-              </span>
-
-            </div>
-
-          )
-        )}
-
+                opacity: 0.9,
+              }}
+            >
+              {row[1]}
+            </span>
+          </div>
+        ))}
       </div>
-
     </div>
-
   );
 }
 
@@ -3066,396 +1933,142 @@ function GuideSection({
 |--------------------------------------------------------------------------
 */
 
-function Waveform({
-  active,
-}: {
-  active:
-    boolean;
-
-}) {
-
-  const [
-    phase,
-    setPhase,
-  ] =
-    useState(0);
+function Waveform({ active }: { active: boolean }) {
+  const [phase, setPhase] = useState(0);
 
   useEffect(() => {
+    let frame: number;
 
-    let frame:
-      number;
+    let last = performance.now();
 
-    let last =
-      performance.now();
+    const animate = (now: number) => {
+      const delta = now - last;
 
-    const animate =
-      (
-        now:
-          number
-      ) => {
+      last = now;
 
-        const delta =
-          now -
-          last;
+      setPhase((previous) => previous + delta * (active ? 0.0038 : 0.00055));
 
-        last =
-          now;
-
-        setPhase(
-          previous =>
-            previous +
-            delta *
-            (
-              active
-                ? 0.0038
-                : 0.00055
-            )
-        );
-
-        frame =
-          requestAnimationFrame(
-            animate
-          );
-
-      };
-
-    frame =
-      requestAnimationFrame(
-        animate
-      );
-
-    return () => {
-
-      cancelAnimationFrame(
-        frame
-      );
-
+      frame = requestAnimationFrame(animate);
     };
 
-  }, [
-    active,
-  ]);
+    frame = requestAnimationFrame(animate);
 
-  const pointCount =
-    360;
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [active]);
 
-  const violetPoints:
-    string[] = [];
+  const pointCount = 360;
 
-  const redPoints:
-    string[] = [];
+  const violetPoints: string[] = [];
 
-  for (
-    let index = 0;
-    index < pointCount;
-    index++
-  ) {
+  const redPoints: string[] = [];
 
-    const x =
-      (
-        index /
-        (pointCount - 1)
-      ) *
-      100;
+  for (let index = 0; index < pointCount; index++) {
+    const x = (index / (pointCount - 1)) * 100;
 
-    const t =
-      index /
-      (pointCount - 1);
+    const t = index / (pointCount - 1);
 
-    const edgeFade =
-      Math.sin(
-        Math.PI *
-        t
-      );
+    const edgeFade = Math.sin(Math.PI * t);
 
-    const edgeCurve =
-      edgeFade *
-      edgeFade;
+    const edgeCurve = edgeFade * edgeFade;
 
-    const current =
-      Math.sin(
-        index *
-        0.075 +
-        phase
-      );
+    const current = Math.sin(index * 0.075 + phase);
 
-    const current2 =
-      Math.sin(
-        index *
-        0.145 -
-        phase *
-        0.72
-      );
+    const current2 = Math.sin(index * 0.145 - phase * 0.72);
 
-    const current3 =
-      Math.sin(
-        index *
-        0.030 +
-        phase *
-        0.42
-      );
+    const current3 = Math.sin(index * 0.03 + phase * 0.42);
 
-    const interaction =
-      Math.sin(
-        index *
-        0.052 +
-        phase *
-        0.82
-      );
+    const interaction = Math.sin(index * 0.052 + phase * 0.82);
 
-    const turbulence =
-      Math.sin(
-        index *
-        0.19 -
-        phase *
-        1.15
-      );
+    const turbulence = Math.sin(index * 0.19 - phase * 1.15);
 
-    const sharedFlow =
-      current *
-      8 +
+    const sharedFlow = current * 8 + current2 * 4.5 + current3 * 3;
 
-      current2 *
-      4.5 +
+    const baseSeparation = 12 + interaction * 8 + turbulence * 2.5;
 
-      current3 *
-      3;
+    const separation = baseSeparation * edgeCurve;
 
-    const baseSeparation =
-      12 +
-      interaction *
-      8 +
-      turbulence *
-      2.5;
+    const ripple = Math.sin(index * 0.31 + phase * 1.55) * 2.4 * edgeFade;
 
-    const separation =
-      baseSeparation *
-      edgeCurve;
+    const center = 55 + sharedFlow;
 
-    const ripple =
-      Math.sin(
-        index *
-        0.31 +
-        phase *
-        1.55
-      ) *
-      2.4 *
-      edgeFade;
+    const violetInteraction = interaction * 3.5 * edgeCurve;
 
-    const center =
-      55 +
-      sharedFlow;
+    const redInteraction = interaction * -3.5 * edgeCurve;
 
-    const violetInteraction =
-      interaction *
-      3.5 *
-      edgeCurve;
+    const violetY = center - separation / 2 + ripple + violetInteraction;
 
-    const redInteraction =
-      interaction *
-      -3.5 *
-      edgeCurve;
+    const redY = center + separation / 2 - ripple + redInteraction;
 
-    const violetY =
-      center -
-      separation /
-      2 +
-      ripple +
-      violetInteraction;
+    violetPoints.push(`${x},${violetY}`);
 
-    const redY =
-      center +
-      separation /
-      2 -
-      ripple +
-      redInteraction;
-
-    violetPoints.push(
-      `${x},${violetY}`
-    );
-
-    redPoints.push(
-      `${x},${redY}`
-    );
-
+    redPoints.push(`${x},${redY}`);
   }
 
-  const violetPath =
-    violetPoints.join(" ");
+  const violetPath = violetPoints.join(" ");
 
-  const redPath =
-    redPoints.join(" ");
+  const redPath = redPoints.join(" ");
 
   return (
-
     <svg
       viewBox="0 0 100 100"
       preserveAspectRatio="none"
       style={{
-        width:
-          "100%",
+        width: "100%",
 
-        height:
-          "100%",
+        height: "100%",
 
-        display:
-          "block",
+        display: "block",
 
-        overflow:
-          "visible",
+        overflow: "visible",
       }}
     >
-
       <defs>
+        <linearGradient id="coupledVioletGradient" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#6A00FF" stopOpacity="0" />
 
-        <linearGradient
-          id="coupledVioletGradient"
-          x1="0"
-          y1="0"
-          x2="1"
-          y2="0"
-        >
+          <stop offset="10%" stopColor="#8A2BE2" stopOpacity="0.70" />
 
-          <stop
-            offset="0%"
-            stopColor="#6A00FF"
-            stopOpacity="0"
-          />
+          <stop offset="28%" stopColor="#B84DFF" stopOpacity="0.95" />
 
-          <stop
-            offset="10%"
-            stopColor="#8A2BE2"
-            stopOpacity="0.70"
-          />
+          <stop offset="50%" stopColor="#E58AFF" stopOpacity="1" />
 
-          <stop
-            offset="28%"
-            stopColor="#B84DFF"
-            stopOpacity="0.95"
-          />
+          <stop offset="72%" stopColor="#B84DFF" stopOpacity="0.95" />
 
-          <stop
-            offset="50%"
-            stopColor="#E58AFF"
-            stopOpacity="1"
-          />
+          <stop offset="90%" stopColor="#8A2BE2" stopOpacity="0.70" />
 
-          <stop
-            offset="72%"
-            stopColor="#B84DFF"
-            stopOpacity="0.95"
-          />
-
-          <stop
-            offset="90%"
-            stopColor="#8A2BE2"
-            stopOpacity="0.70"
-          />
-
-          <stop
-            offset="100%"
-            stopColor="#6A00FF"
-            stopOpacity="0"
-          />
-
+          <stop offset="100%" stopColor="#6A00FF" stopOpacity="0" />
         </linearGradient>
 
-        <linearGradient
-          id="coupledRedGradient"
-          x1="0"
-          y1="0"
-          x2="1"
-          y2="0"
-        >
+        <linearGradient id="coupledRedGradient" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#FF003C" stopOpacity="0" />
 
-          <stop
-            offset="0%"
-            stopColor="#FF003C"
-            stopOpacity="0"
-          />
+          <stop offset="10%" stopColor="#FF174F" stopOpacity="0.70" />
 
-          <stop
-            offset="10%"
-            stopColor="#FF174F"
-            stopOpacity="0.70"
-          />
+          <stop offset="28%" stopColor="#FF3D67" stopOpacity="0.95" />
 
-          <stop
-            offset="28%"
-            stopColor="#FF3D67"
-            stopOpacity="0.95"
-          />
+          <stop offset="50%" stopColor="#FF8197" stopOpacity="1" />
 
-          <stop
-            offset="50%"
-            stopColor="#FF8197"
-            stopOpacity="1"
-          />
+          <stop offset="72%" stopColor="#FF3D67" stopOpacity="0.95" />
 
-          <stop
-            offset="72%"
-            stopColor="#FF3D67"
-            stopOpacity="0.95"
-          />
+          <stop offset="90%" stopColor="#FF174F" stopOpacity="0.70" />
 
-          <stop
-            offset="90%"
-            stopColor="#FF174F"
-            stopOpacity="0.70"
-          />
-
-          <stop
-            offset="100%"
-            stopColor="#FF003C"
-            stopOpacity="0"
-          />
-
+          <stop offset="100%" stopColor="#FF003C" stopOpacity="0" />
         </linearGradient>
 
-        <linearGradient
-          id="coupledCurrentGradient"
-          x1="0"
-          y1="0"
-          x2="1"
-          y2="0"
-        >
+        <linearGradient id="coupledCurrentGradient" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#7A00FF" stopOpacity="0" />
 
-          <stop
-            offset="0%"
-            stopColor="#7A00FF"
-            stopOpacity="0"
-          />
+          <stop offset="22%" stopColor="#A33CFF" stopOpacity="0.45" />
 
-          <stop
-            offset="22%"
-            stopColor="#A33CFF"
-            stopOpacity="0.45"
-          />
+          <stop offset="42%" stopColor="#D44DFF" stopOpacity="0.75" />
 
-          <stop
-            offset="42%"
-            stopColor="#D44DFF"
-            stopOpacity="0.75"
-          />
+          <stop offset="56%" stopColor="#FF3D5A" stopOpacity="0.75" />
 
-          <stop
-            offset="56%"
-            stopColor="#FF3D5A"
-            stopOpacity="0.75"
-          />
+          <stop offset="78%" stopColor="#FF174F" stopOpacity="0.45" />
 
-          <stop
-            offset="78%"
-            stopColor="#FF174F"
-            stopOpacity="0.45"
-          />
-
-          <stop
-            offset="100%"
-            stopColor="#FF003C"
-            stopOpacity="0"
-          />
-
+          <stop offset="100%" stopColor="#FF003C" stopOpacity="0" />
         </linearGradient>
 
         <filter
@@ -3465,24 +2078,13 @@ function Waveform({
           width="160%"
           height="400%"
         >
-
-          <feGaussianBlur
-            stdDeviation="2.2"
-            result="blur"
-          />
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
 
           <feMerge>
+            <feMergeNode in="blur" />
 
-            <feMergeNode
-              in="blur"
-            />
-
-            <feMergeNode
-              in="SourceGraphic"
-            />
-
+            <feMergeNode in="SourceGraphic" />
           </feMerge>
-
         </filter>
 
         <filter
@@ -3492,24 +2094,13 @@ function Waveform({
           width="160%"
           height="400%"
         >
-
-          <feGaussianBlur
-            stdDeviation="2.2"
-            result="blur"
-          />
+          <feGaussianBlur stdDeviation="2.2" result="blur" />
 
           <feMerge>
+            <feMergeNode in="blur" />
 
-            <feMergeNode
-              in="blur"
-            />
-
-            <feMergeNode
-              in="SourceGraphic"
-            />
-
+            <feMergeNode in="SourceGraphic" />
           </feMerge>
-
         </filter>
 
         <filter
@@ -3519,157 +2110,92 @@ function Waveform({
           width="160%"
           height="400%"
         >
-
-          <feGaussianBlur
-            stdDeviation="4"
-          />
-
+          <feGaussianBlur stdDeviation="4" />
         </filter>
-
       </defs>
 
       <polyline
-        points={
-          violetPath
-        }
+        points={violetPath}
         fill="none"
         stroke="url(#coupledCurrentGradient)"
         strokeWidth="10"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.14
-            : 0.025
-        }
+        opacity={active ? 0.14 : 0.025}
         filter="url(#coupledCurrentGlow)"
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          violetPath
-        }
+        points={violetPath}
         fill="none"
         stroke="#9B35FF"
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.20
-            : 0.035
-        }
+        opacity={active ? 0.2 : 0.035}
         filter="url(#coupledVioletGlow)"
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          redPath
-        }
+        points={redPath}
         fill="none"
         stroke="#FF3158"
         strokeWidth="6"
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.20
-            : 0.035
-        }
+        opacity={active ? 0.2 : 0.035}
         filter="url(#coupledRedGlow)"
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          violetPath
-        }
+        points={violetPath}
         fill="none"
         stroke="url(#coupledVioletGradient)"
-        strokeWidth={
-          active
-            ? 3.2
-            : 1.5
-        }
+        strokeWidth={active ? 3.2 : 1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.96
-            : 0.18
-        }
+        opacity={active ? 0.96 : 0.18}
         filter="url(#coupledVioletGlow)"
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          redPath
-        }
+        points={redPath}
         fill="none"
         stroke="url(#coupledRedGradient)"
-        strokeWidth={
-          active
-            ? 3.2
-            : 1.5
-        }
+        strokeWidth={active ? 3.2 : 1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.96
-            : 0.18
-        }
+        opacity={active ? 0.96 : 0.18}
         filter="url(#coupledRedGlow)"
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          violetPath
-        }
+        points={violetPath}
         fill="none"
         stroke="#E0A0FF"
-        strokeWidth={
-          active
-            ? 0.95
-            : 0.4
-        }
+        strokeWidth={active ? 0.95 : 0.4}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.92
-            : 0.10
-        }
+        opacity={active ? 0.92 : 0.1}
         vectorEffect="non-scaling-stroke"
       />
 
       <polyline
-        points={
-          redPath
-        }
+        points={redPath}
         fill="none"
         stroke="#FF8095"
-        strokeWidth={
-          active
-            ? 0.95
-            : 0.4
-        }
+        strokeWidth={active ? 0.95 : 0.4}
         strokeLinecap="round"
         strokeLinejoin="round"
-        opacity={
-          active
-            ? 0.92
-            : 0.10
-        }
+        opacity={active ? 0.92 : 0.1}
         vectorEffect="non-scaling-stroke"
       />
-
     </svg>
-
   );
 }
 
@@ -3680,30 +2206,21 @@ function Waveform({
 */
 
 interface ChordBuildInput {
+  degree: string;
 
-  degree:
-    string;
+  quality: ChordQuality;
 
-  quality:
-    ChordQuality;
+  shape: ChordShape;
 
-  shape:
-    ChordShape;
+  key: string;
 
-  key:
-    string;
+  scale: string;
 
-  scale:
-    string;
+  chordSemitone: number;
 
-  chordSemitone:
-    number;
+  transpose: number;
 
-  transpose:
-    number;
-
-  octaveOffset:
-    number;
+  octaveOffset: number;
 }
 
 /*
@@ -3712,48 +2229,23 @@ interface ChordBuildInput {
 |--------------------------------------------------------------------------
 */
 
-function generateChordNotes(
-  input:
-    ChordBuildInput
-): string[] {
+function generateChordNotes(input: ChordBuildInput): string[] {
+  const keyOffset = KEY_OFFSETS[input.key];
 
-  const keyOffset =
-    KEY_OFFSETS[
-      input.key
-    ];
-
-  if (
-    keyOffset === undefined
-  ) {
-
+  if (keyOffset === undefined) {
     return [];
-
   }
 
-  const scale =
-    SCALE_INTERVALS[
-      input.scale
-    ];
+  const scale = SCALE_INTERVALS[input.scale];
 
-  if (
-    !scale
-  ) {
-
+  if (!scale) {
     return [];
-
   }
 
-  const degreeOffset =
-    scale[
-      input.degree
-    ];
+  const degreeOffset = scale[input.degree];
 
-  if (
-    degreeOffset === undefined
-  ) {
-
+  if (degreeOffset === undefined) {
     return [];
-
   }
 
   /*
@@ -3762,10 +2254,7 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  let root =
-    60 +
-    keyOffset +
-    degreeOffset;
+  let root = 60 + keyOffset + degreeOffset;
 
   /*
   |--------------------------------------------------------------------------
@@ -3773,8 +2262,7 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    input.chordSemitone;
+  root += input.chordSemitone;
 
   /*
   |--------------------------------------------------------------------------
@@ -3782,8 +2270,7 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    input.transpose;
+  root += input.transpose;
 
   /*
   |--------------------------------------------------------------------------
@@ -3791,11 +2278,9 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    input.octaveOffset;
+  root += input.octaveOffset;
 
-  let intervals:
-    number[];
+  let intervals: number[];
 
   /*
   |--------------------------------------------------------------------------
@@ -3803,115 +2288,32 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    input.shape ===
-    "ROOT"
-  ) {
-
-    intervals =
-      input.quality ===
-      "MINOR"
-
-        ? [
-            0,
-            3,
-            7,
-          ]
-
-        : [
-            0,
-            4,
-            7,
-          ];
-
-  }
+  if (input.shape === "ROOT") {
+    intervals = input.quality === "MINOR" ? [0, 3, 7] : [0, 4, 7];
+  } else if (input.shape === "INVERSION") {
 
   /*
   |--------------------------------------------------------------------------
   | INVERSION
   |--------------------------------------------------------------------------
   */
-
-  else if (
-    input.shape ===
-    "INVERSION"
-  ) {
-
-    intervals =
-      input.quality ===
-      "MINOR"
-
-        ? [
-            3,
-            7,
-            12,
-          ]
-
-        : [
-            4,
-            7,
-            12,
-          ];
-
-  }
+    intervals = input.quality === "MINOR" ? [3, 7, 12] : [4, 7, 12];
+  } else if (input.shape === "SEVENTH") {
 
   /*
   |--------------------------------------------------------------------------
   | SEVENTH
   |--------------------------------------------------------------------------
   */
-
-  else if (
-    input.shape ===
-    "SEVENTH"
-  ) {
-
-    intervals =
-      input.quality ===
-      "MINOR"
-
-        ? [
-            0,
-            3,
-            7,
-            10,
-          ]
-
-        : [
-            0,
-            4,
-            7,
-            11,
-          ];
-
-  }
+    intervals = input.quality === "MINOR" ? [0, 3, 7, 10] : [0, 4, 7, 11];
+  } else {
 
   /*
   |--------------------------------------------------------------------------
   | DOMINANT / DIMINISHED
   |--------------------------------------------------------------------------
   */
-
-  else {
-
-    intervals =
-      input.quality ===
-      "MINOR"
-
-        ? [
-            0,
-            3,
-            6,
-            9,
-          ]
-
-        : [
-            0,
-            4,
-            7,
-            10,
-          ];
-
+    intervals = input.quality === "MINOR" ? [0, 3, 6, 9] : [0, 4, 7, 10];
   }
 
   /*
@@ -3920,13 +2322,7 @@ function generateChordNotes(
   |--------------------------------------------------------------------------
   */
 
-  return intervals.map(
-    interval =>
-      midiToNote(
-        root +
-        interval
-      )
-  );
+  return intervals.map((interval) => midiToNote(root + interval));
 }
 
 /*
@@ -3935,31 +2331,12 @@ function generateChordNotes(
 |--------------------------------------------------------------------------
 */
 
-function midiToNote(
-  midi:
-    number
-): string {
+function midiToNote(midi: number): string {
+  const safeMidi = Math.max(0, Math.min(127, Math.round(midi)));
 
-  const safeMidi =
-    Math.max(
-      0,
-      Math.min(
-        127,
-        Math.round(
-          midi
-        )
-      )
-    );
+  const note = KEY_NAMES[safeMidi % 12];
 
-  const note =
-    KEY_NAMES[
-      safeMidi % 12
-    ];
-
-  const octave =
-    Math.floor(
-      safeMidi / 12
-    ) - 1;
+  const octave = Math.floor(safeMidi / 12) - 1;
 
   return `${note}${octave}`;
 }
@@ -3970,25 +2347,10 @@ function midiToNote(
 |--------------------------------------------------------------------------
 */
 
-function midiToNoteName(
-  midi:
-    number
-): string {
+function midiToNoteName(midi: number): string {
+  const safeMidi = Math.max(0, Math.min(127, Math.round(midi)));
 
-  const safeMidi =
-    Math.max(
-      0,
-      Math.min(
-        127,
-        Math.round(
-          midi
-        )
-      )
-    );
-
-  return KEY_NAMES[
-    safeMidi % 12
-  ];
+  return KEY_NAMES[safeMidi % 12];
 }
 
 /*

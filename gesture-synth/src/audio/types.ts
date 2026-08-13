@@ -1,3 +1,1 @@
-export type InstrumentType =
-  | "PIANO"
-  | "SYNTH";
+export type InstrumentType = "ORGAN" | "SYNTH";

@@ -1,9 +1,6 @@
 import { useEffect, useRef } from "react";
 
-import type {
-  HandLandmarks,
-} from "../gestures/types";
-
+import type { HandLandmarks } from "../gestures/types";
 
 /*
 |--------------------------------------------------------------------------
@@ -12,21 +9,12 @@ import type {
 */
 
 interface HandOverlayProps {
+  video: HTMLVideoElement | null;
 
-  video:
-    | HTMLVideoElement
-    | null;
+  leftHand: HandLandmarks | null;
 
-  leftHand:
-    | HandLandmarks
-    | null;
-
-  rightHand:
-    | HandLandmarks
-    | null;
-
+  rightHand: HandLandmarks | null;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -41,48 +29,23 @@ interface HandOverlayProps {
 |--------------------------------------------------------------------------
 */
 
-export function HandOverlay({
-  video,
-  leftHand,
-  rightHand,
-}: HandOverlayProps) {
-
-  const canvasRef =
-    useRef<HTMLCanvasElement | null>(
-      null
-    );
-
+export function HandOverlay({ video, leftHand, rightHand }: HandOverlayProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
 
-    const canvas =
-      canvasRef.current;
-
-
-    if (
-      !canvas ||
-      !video
-    ) {
-
+    if (!canvas || !video) {
       return;
-
     }
 
-
-    const ctx =
-      canvas.getContext("2d");
-
+    const ctx = canvas.getContext("2d");
 
     if (!ctx) {
-
       return;
-
     }
 
-
-    let animationFrameId:
-      number;
-
+    let animationFrameId: number;
 
     /*
     |--------------------------------------------------------------------------
@@ -91,27 +54,17 @@ export function HandOverlay({
     */
 
     const draw = () => {
-
       /*
       |--------------------------------------------------------------------------
       | WAIT FOR VIDEO
       |--------------------------------------------------------------------------
       */
 
-      if (
-        video.readyState <
-        HTMLMediaElement.HAVE_CURRENT_DATA
-      ) {
-
-        animationFrameId =
-          requestAnimationFrame(
-            draw
-          );
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) {
+        animationFrameId = requestAnimationFrame(draw);
 
         return;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -119,28 +72,15 @@ export function HandOverlay({
       |--------------------------------------------------------------------------
       */
 
-      const width =
-        video.videoWidth;
+      const width = video.videoWidth;
 
+      const height = video.videoHeight;
 
-      const height =
-        video.videoHeight;
-
-
-      if (
-        width === 0 ||
-        height === 0
-      ) {
-
-        animationFrameId =
-          requestAnimationFrame(
-            draw
-          );
+      if (width === 0 || height === 0) {
+        animationFrameId = requestAnimationFrame(draw);
 
         return;
-
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -148,19 +88,11 @@ export function HandOverlay({
       |--------------------------------------------------------------------------
       */
 
-      if (
-        canvas.width !== width ||
-        canvas.height !== height
-      ) {
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
 
-        canvas.width =
-          width;
-
-        canvas.height =
-          height;
-
+        canvas.height = height;
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -168,13 +100,7 @@ export function HandOverlay({
       |--------------------------------------------------------------------------
       */
 
-      ctx.clearRect(
-        0,
-        0,
-        width,
-        height
-      );
-
+      ctx.clearRect(0, 0, width, height);
 
       /*
       |--------------------------------------------------------------------------
@@ -182,21 +108,9 @@ export function HandOverlay({
       |--------------------------------------------------------------------------
       */
 
-      drawHand(
-        ctx,
-        leftHand,
-        width,
-        height
-      );
+      drawHand(ctx, leftHand, width, height);
 
-
-      drawHand(
-        ctx,
-        rightHand,
-        width,
-        height
-      );
-
+      drawHand(ctx, rightHand, width, height);
 
       /*
       |--------------------------------------------------------------------------
@@ -204,16 +118,10 @@ export function HandOverlay({
       |--------------------------------------------------------------------------
       */
 
-      animationFrameId =
-        requestAnimationFrame(
-          draw
-        );
-
+      animationFrameId = requestAnimationFrame(draw);
     };
 
-
     draw();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -222,19 +130,9 @@ export function HandOverlay({
     */
 
     return () => {
-
-      cancelAnimationFrame(
-        animationFrameId
-      );
-
+      cancelAnimationFrame(animationFrameId);
     };
-
-  }, [
-    video,
-    leftHand,
-    rightHand,
-  ]);
-
+  }, [video, leftHand, rightHand]);
 
   /*
   |--------------------------------------------------------------------------
@@ -243,27 +141,18 @@ export function HandOverlay({
   */
 
   return (
-
     <canvas
-      ref={
-        canvasRef
-      }
-
+      ref={canvasRef}
       style={{
-        position:
-          "absolute",
+        position: "absolute",
 
-        inset:
-          0,
+        inset: 0,
 
-        width:
-          "100%",
+        width: "100%",
 
-        height:
-          "100%",
+        height: "100%",
 
-        pointerEvents:
-          "none",
+        pointerEvents: "none",
 
         /*
         |--------------------------------------------------------------------------
@@ -277,15 +166,11 @@ export function HandOverlay({
         |--------------------------------------------------------------------------
         */
 
-        transform:
-          "scaleX(-1)",
+        transform: "scaleX(-1)",
       }}
     />
-
   );
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -300,35 +185,21 @@ export function HandOverlay({
 function drawHand(
   ctx: CanvasRenderingContext2D,
 
-  hand:
-    | HandLandmarks
-    | null,
+  hand: HandLandmarks | null,
 
   width: number,
 
-  height: number
+  height: number,
 ) {
-
   if (!hand) {
-
     return;
-
   }
 
+  const landmarks = hand.landmarks;
 
-  const landmarks =
-    hand.landmarks;
-
-
-  if (
-    !landmarks ||
-    landmarks.length === 0
-  ) {
-
+  if (!landmarks || landmarks.length === 0) {
     return;
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -336,30 +207,16 @@ function drawHand(
   |--------------------------------------------------------------------------
   */
 
-  for (
-    let i = 0;
-    i < landmarks.length;
-    i++
-  ) {
-
-    const landmark =
-      landmarks[i];
-
+  for (let i = 0; i < landmarks.length; i++) {
+    const landmark = landmarks[i];
 
     if (!landmark) {
-
       continue;
-
     }
 
+    const x = landmark.x * width;
 
-    const x =
-      landmark.x * width;
-
-
-    const y =
-      landmark.y * height;
-
+    const y = landmark.y * height;
 
     /*
     |--------------------------------------------------------------------------
@@ -378,25 +235,11 @@ function drawHand(
     |--------------------------------------------------------------------------
     */
 
-    const isWrist =
-      i === 0;
+    const isWrist = i === 0;
 
+    const isFingerTip = i === 4 || i === 8 || i === 12 || i === 16 || i === 20;
 
-    const isFingerTip =
-      i === 4 ||
-      i === 8 ||
-      i === 12 ||
-      i === 16 ||
-      i === 20;
-
-
-    const radius =
-      isWrist
-        ? 8
-        : isFingerTip
-          ? 7
-          : 5;
-
+    const radius = isWrist ? 8 : isFingerTip ? 7 : 5;
 
     /*
     |--------------------------------------------------------------------------
@@ -411,19 +254,11 @@ function drawHand(
 
     ctx.beginPath();
 
-    ctx.arc(
-      x,
-      y,
-      radius + 2,
-      0,
-      Math.PI * 2
-    );
+    ctx.arc(x, y, radius + 2, 0, Math.PI * 2);
 
-    ctx.fillStyle =
-      "rgba(0, 0, 0, 0.75)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
 
     ctx.fill();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -433,14 +268,7 @@ function drawHand(
 
     ctx.beginPath();
 
-    ctx.arc(
-      x,
-      y,
-      radius,
-      0,
-      Math.PI * 2
-    );
-
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
 
     /*
     |--------------------------------------------------------------------------
@@ -448,16 +276,9 @@ function drawHand(
     |--------------------------------------------------------------------------
     */
 
-    ctx.fillStyle =
-      isWrist
-        ? "#FFD700"
-        : isFingerTip
-          ? "#00FFFF"
-          : "#FFFFFF";
-
+    ctx.fillStyle = isWrist ? "#FFD700" : isFingerTip ? "#00FFFF" : "#FFFFFF";
 
     ctx.fill();
-
 
     /*
     |--------------------------------------------------------------------------
@@ -470,19 +291,13 @@ function drawHand(
     ctx.arc(
       x - radius * 0.25,
       y - radius * 0.25,
-      Math.max(
-        1,
-        radius * 0.2
-      ),
+      Math.max(1, radius * 0.2),
       0,
-      Math.PI * 2
+      Math.PI * 2,
     );
 
-    ctx.fillStyle =
-      "rgba(255, 255, 255, 0.8)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
 
     ctx.fill();
-
   }
-
 }

@@ -1,33 +1,16 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import {
-  isTransposeGesture,
-} from "./GestureMapper";
+import { isTransposeGesture } from "./GestureMapper";
 
-import type {
-  FingerState,
-} from "./FingerDetector";
+import type { FingerState } from "./FingerDetector";
 
-export function useTransposeController(
-  fingers: FingerState | null
-) {
-  const previousGesture =
-    useRef(false);
+export function useTransposeController(fingers: FingerState | null) {
+  const previousGesture = useRef(false);
 
-  const [
-    transposeEnabled,
-    setTransposeEnabled,
-  ] = useState(false);
+  const [transposeEnabled, setTransposeEnabled] = useState(false);
 
   useEffect(() => {
-    const currentGesture =
-      isTransposeGesture(
-        fingers
-      );
+    const currentGesture = isTransposeGesture(fingers);
 
     /*
      * Detect only the transition:
@@ -35,17 +18,11 @@ export function useTransposeController(
      * false → true
      */
 
-    if (
-      currentGesture &&
-      !previousGesture.current
-    ) {
-      setTransposeEnabled(
-        (previous) => !previous
-      );
+    if (currentGesture && !previousGesture.current) {
+      setTransposeEnabled((previous) => !previous);
     }
 
-    previousGesture.current =
-      currentGesture;
+    previousGesture.current = currentGesture;
   }, [fingers]);
 
   return transposeEnabled;

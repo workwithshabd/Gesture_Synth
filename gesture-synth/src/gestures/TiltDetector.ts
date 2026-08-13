@@ -23,14 +23,9 @@
 |--------------------------------------------------------------------------
 */
 
-export type TiltDirection =
-  | "INWARD"
-  | "OUTWARD"
-  | "NEUTRAL";
+export type TiltDirection = "INWARD" | "OUTWARD" | "NEUTRAL";
 
-export type Handedness =
-  | "Left"
-  | "Right";
+export type Handedness = "Left" | "Right";
 
 export interface TiltLandmark {
   x: number;
@@ -38,19 +33,17 @@ export interface TiltLandmark {
   z?: number;
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | SETTINGS
 |--------------------------------------------------------------------------
 */
 
-const TILT_THRESHOLD = 0.10;
+const TILT_THRESHOLD = 0.1;
 
 const INDEX_MCP = 5;
 
 const PINKY_MCP = 17;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -64,76 +57,35 @@ const PINKY_MCP = 17;
 |--------------------------------------------------------------------------
 */
 
-export function getTiltValue(
-  landmarks: TiltLandmark[]
-): number {
-
-  if (
-    !landmarks ||
-    landmarks.length <= PINKY_MCP
-  ) {
-
+export function getTiltValue(landmarks: TiltLandmark[]): number {
+  if (!landmarks || landmarks.length <= PINKY_MCP) {
     return 0;
-
   }
 
+  const indexMcp = landmarks[INDEX_MCP];
 
-  const indexMcp =
-    landmarks[INDEX_MCP];
+  const pinkyMcp = landmarks[PINKY_MCP];
 
-  const pinkyMcp =
-    landmarks[PINKY_MCP];
-
-
-  if (
-    !indexMcp ||
-    !pinkyMcp
-  ) {
-
+  if (!indexMcp || !pinkyMcp) {
     return 0;
-
   }
 
+  const dx = pinkyMcp.x - indexMcp.x;
 
-  const dx =
-    pinkyMcp.x -
-    indexMcp.x;
+  const dy = pinkyMcp.y - indexMcp.y;
 
-  const dy =
-    pinkyMcp.y -
-    indexMcp.y;
-
-
-  if (
-    !Number.isFinite(dx) ||
-    !Number.isFinite(dy)
-  ) {
-
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
     return 0;
-
   }
 
+  const length = Math.sqrt(dx * dx + dy * dy);
 
-  const length =
-    Math.sqrt(
-      dx * dx +
-      dy * dy
-    );
-
-
-  if (
-    length < 0.001
-  ) {
-
+  if (length < 0.001) {
     return 0;
-
   }
-
 
   return dy / length;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -143,14 +95,9 @@ export function getTiltValue(
 
 export function getTiltDirection(
   landmarks: TiltLandmark[],
-  handedness?: Handedness
+  handedness?: Handedness,
 ): TiltDirection {
-
-  const tiltValue =
-    getTiltValue(
-      landmarks
-    );
-
+  const tiltValue = getTiltValue(landmarks);
 
   /*
   |--------------------------------------------------------------------------
@@ -165,22 +112,13 @@ export function getTiltDirection(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    handedness === "Left"
-  ) {
-
-    if (
-      tiltValue > 0
-    ) {
-
+  if (handedness === "Left") {
+    if (tiltValue > 0) {
       return "INWARD";
-
     }
 
     return "OUTWARD";
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -192,34 +130,17 @@ export function getTiltDirection(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    handedness === "Right"
-  ) {
-
-    if (
-      Math.abs(
-        tiltValue
-      ) < TILT_THRESHOLD
-    ) {
-
+  if (handedness === "Right") {
+    if (Math.abs(tiltValue) < TILT_THRESHOLD) {
       return "NEUTRAL";
-
     }
 
-
-    if (
-      tiltValue > 0
-    ) {
-
+    if (tiltValue > 0) {
       return "OUTWARD";
-
     }
-
 
     return "INWARD";
-
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -231,26 +152,13 @@ export function getTiltDirection(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    Math.abs(
-      tiltValue
-    ) < TILT_THRESHOLD
-  ) {
-
+  if (Math.abs(tiltValue) < TILT_THRESHOLD) {
     return "NEUTRAL";
-
   }
 
-
-  if (
-    tiltValue > 0
-  ) {
-
+  if (tiltValue > 0) {
     return "OUTWARD";
-
   }
-
 
   return "INWARD";
-
 }

@@ -1,12 +1,6 @@
-import {
-  midiToNote,
-  noteStringToMidi,
-} from "./NoteUtils";
+import { midiToNote, noteStringToMidi } from "./NoteUtils";
 
-import type {
-  Voicing,
-  OctaveDirection,
-} from "./types";
+import type { Voicing, OctaveDirection } from "./types";
 
 export class VoicingEngine {
   /**
@@ -18,9 +12,7 @@ export class VoicingEngine {
    * 3 → 7th chord, root position
    * 4 → 7th chord, root position
    */
-  getVoicingFromFingerCount(
-    fingerCount: number
-  ): Voicing {
+  getVoicingFromFingerCount(fingerCount: number): Voicing {
     switch (fingerCount) {
       case 1:
         return "root";
@@ -49,9 +41,7 @@ export class VoicingEngine {
    * 3/4 finger gestures create a
    * seventh chord but remain root position.
    */
-  getInversion(
-    voicing: Voicing
-  ): number {
+  getInversion(voicing: Voicing): number {
     switch (voicing) {
       case "root":
         return 0;
@@ -84,33 +74,18 @@ export class VoicingEngine {
   createInversion(
     notes: string[],
     inversion: number,
-    preferFlats = false
+    preferFlats = false,
   ): string[] {
     if (notes.length === 0) {
       return [];
     }
 
-    const result =
-      notes.map(note =>
-        noteStringToMidi(note)
-      );
+    const result = notes.map((note) => noteStringToMidi(note));
 
-    const safeInversion =
-      Math.max(
-        0,
-        Math.min(
-          inversion,
-          notes.length - 1
-        )
-      );
+    const safeInversion = Math.max(0, Math.min(inversion, notes.length - 1));
 
-    for (
-      let i = 0;
-      i < safeInversion;
-      i++
-    ) {
-      const first =
-        result.shift();
+    for (let i = 0; i < safeInversion; i++) {
+      const first = result.shift();
 
       if (first === undefined) {
         break;
@@ -119,12 +94,7 @@ export class VoicingEngine {
       result.push(first + 12);
     }
 
-    return result.map(midi =>
-      midiToNote(
-        midi,
-        preferFlats
-      )
-    );
+    return result.map((midi) => midiToNote(midi, preferFlats));
   }
 
   /**
@@ -137,7 +107,7 @@ export class VoicingEngine {
     notes: string[],
     direction: OctaveDirection,
     amount = 1,
-    preferFlats = false
+    preferFlats = false,
   ): string[] {
     let semitones = 0;
 
@@ -153,14 +123,10 @@ export class VoicingEngine {
       return notes;
     }
 
-    return notes.map(note => {
-      const midi =
-        noteStringToMidi(note);
+    return notes.map((note) => {
+      const midi = noteStringToMidi(note);
 
-      return midiToNote(
-        midi + semitones,
-        preferFlats
-      );
+      return midiToNote(midi + semitones, preferFlats);
     });
   }
 }

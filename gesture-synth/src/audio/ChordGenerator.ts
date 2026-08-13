@@ -17,25 +17,15 @@
 |--------------------------------------------------------------------------
 */
 
-export type ChordDegree =
-  | "I"
-  | "II"
-  | "III"
-  | "IV"
-  | "V"
-  | "VI"
-  | "VII";
+export type ChordDegree = "I" | "II" | "III" | "IV" | "V" | "VI" | "VII";
 
-export type ChordQuality =
-  | "MAJOR"
-  | "MINOR";
+export type ChordQuality = "MAJOR" | "MINOR";
 
 export type ChordShape =
   | "ROOT"
   | "INVERSION"
   | "SEVENTH"
   | "DOMINANT_DIMINISHED";
-
 
 /*
 |--------------------------------------------------------------------------
@@ -44,7 +34,6 @@ export type ChordShape =
 */
 
 export interface ChordState {
-
   degree: ChordDegree;
 
   quality: ChordQuality;
@@ -83,9 +72,7 @@ export interface ChordState {
    */
 
   octaveOffset: number;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -105,17 +92,15 @@ export interface ChordState {
 |--------------------------------------------------------------------------
 */
 
-const SCALE =
-  [
-    0,  // I
-    2,  // II
-    4,  // III
-    5,  // IV
-    7,  // V
-    9,  // VI
-    11, // VII
-  ];
-
+const SCALE = [
+  0, // I
+  2, // II
+  4, // III
+  5, // IV
+  7, // V
+  9, // VI
+  11, // VII
+];
 
 /*
 |--------------------------------------------------------------------------
@@ -126,9 +111,7 @@ const SCALE =
 |--------------------------------------------------------------------------
 */
 
-const DEFAULT_ROOT_MIDI =
-  60;
-
+const DEFAULT_ROOT_MIDI = 60;
 
 /*
 |--------------------------------------------------------------------------
@@ -146,20 +129,9 @@ const DEFAULT_ROOT_MIDI =
 |--------------------------------------------------------------------------
 */
 
-const MAJOR_TRIAD =
-  [
-    0,
-    4,
-    7,
-  ];
+const MAJOR_TRIAD = [0, 4, 7];
 
-const MINOR_TRIAD =
-  [
-    0,
-    3,
-    7,
-  ];
-
+const MINOR_TRIAD = [0, 3, 7];
 
 /*
 |--------------------------------------------------------------------------
@@ -177,22 +149,9 @@ const MINOR_TRIAD =
 |--------------------------------------------------------------------------
 */
 
-const MAJOR_SEVENTH =
-  [
-    0,
-    4,
-    7,
-    11,
-  ];
+const MAJOR_SEVENTH = [0, 4, 7, 11];
 
-const MINOR_SEVENTH =
-  [
-    0,
-    3,
-    7,
-    10,
-  ];
-
+const MINOR_SEVENTH = [0, 3, 7, 10];
 
 /*
 |--------------------------------------------------------------------------
@@ -216,14 +175,7 @@ const MINOR_SEVENTH =
 |--------------------------------------------------------------------------
 */
 
-const DOMINANT_SEVENTH =
-  [
-    0,
-    4,
-    7,
-    10,
-  ];
-
+const DOMINANT_SEVENTH = [0, 4, 7, 10];
 
 /*
 |--------------------------------------------------------------------------
@@ -231,22 +183,20 @@ const DOMINANT_SEVENTH =
 |--------------------------------------------------------------------------
 */
 
-const NOTE_NAMES =
-  [
-    "C",
-    "C#",
-    "D",
-    "D#",
-    "E",
-    "F",
-    "F#",
-    "G",
-    "G#",
-    "A",
-    "A#",
-    "B",
-  ];
-
+const NOTE_NAMES = [
+  "C",
+  "C#",
+  "D",
+  "D#",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "G#",
+  "A",
+  "A#",
+  "B",
+];
 
 /*
 |--------------------------------------------------------------------------
@@ -262,27 +212,15 @@ const NOTE_NAMES =
 |--------------------------------------------------------------------------
 */
 
-export function midiToNote(
-  midi: number
-): string {
+export function midiToNote(midi: number): string {
+  const rounded = Math.round(midi);
 
-  const rounded =
-    Math.round(midi);
+  const pitchClass = ((rounded % 12) + 12) % 12;
 
-  const pitchClass =
-    ((rounded % 12) + 12) % 12;
+  const octave = Math.floor(rounded / 12) - 1;
 
-  const octave =
-    Math.floor(
-      rounded / 12
-    ) - 1;
-
-  return (
-    `${NOTE_NAMES[pitchClass]}${octave}`
-  );
-
+  return `${NOTE_NAMES[pitchClass]}${octave}`;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -299,76 +237,39 @@ export function midiToNote(
 |--------------------------------------------------------------------------
 */
 
-export function noteToMidi(
-  note: string
-): number {
-
-  const match =
-    note.match(
-      /^([A-Ga-g])([#b]?)(-?\d+)$/
-    );
+export function noteToMidi(note: string): number {
+  const match = note.match(/^([A-Ga-g])([#b]?)(-?\d+)$/);
 
   if (!match) {
-
-    throw new Error(
-      `Invalid note: ${note}`
-    );
-
+    throw new Error(`Invalid note: ${note}`);
   }
 
+  const letter = match[1].toUpperCase();
 
-  const letter =
-    match[1].toUpperCase();
+  const accidental = match[2];
 
-  const accidental =
-    match[2];
+  const octave = Number(match[3]);
 
-  const octave =
-    Number(match[3]);
+  const baseMap: Record<string, number> = {
+    C: 0,
+    D: 2,
+    E: 4,
+    F: 5,
+    G: 7,
+    A: 9,
+    B: 11,
+  };
 
+  let pitch = baseMap[letter];
 
-  const baseMap:
-    Record<string, number> = {
-
-      C: 0,
-      D: 2,
-      E: 4,
-      F: 5,
-      G: 7,
-      A: 9,
-      B: 11,
-
-    };
-
-
-  let pitch =
-    baseMap[letter];
-
-
-  if (
-    accidental === "#"
-  ) {
-
+  if (accidental === "#") {
     pitch += 1;
-
-  }
-
-  else if (
-    accidental === "b"
-  ) {
-
+  } else if (accidental === "b") {
     pitch -= 1;
-
   }
 
-
-  return (
-    (octave + 1) * 12 +
-    pitch
-  );
-
+  return (octave + 1) * 12 + pitch;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -376,12 +277,8 @@ export function noteToMidi(
 |--------------------------------------------------------------------------
 */
 
-function getDegreeIndex(
-  degree: ChordDegree
-): number {
-
+function getDegreeIndex(degree: ChordDegree): number {
   switch (degree) {
-
     case "I":
       return 0;
 
@@ -402,11 +299,8 @@ function getDegreeIndex(
 
     case "VII":
       return 6;
-
   }
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -426,22 +320,11 @@ function getDegreeIndex(
 |--------------------------------------------------------------------------
 */
 
-function getChordRoot(
-  degree: ChordDegree
-): number {
+function getChordRoot(degree: ChordDegree): number {
+  const degreeIndex = getDegreeIndex(degree);
 
-  const degreeIndex =
-    getDegreeIndex(
-      degree
-    );
-
-  return (
-    DEFAULT_ROOT_MIDI +
-    SCALE[degreeIndex]
-  );
-
+  return DEFAULT_ROOT_MIDI + SCALE[degreeIndex];
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -449,54 +332,31 @@ function getChordRoot(
 |--------------------------------------------------------------------------
 */
 
-function getChordIntervals(
-  quality: ChordQuality,
-  shape: ChordShape
-): number[] {
-
+function getChordIntervals(quality: ChordQuality, shape: ChordShape): number[] {
   /*
    * ROOT / INVERSION
    *
    * Both start with a triad.
    */
 
-  if (
-    shape === "ROOT" ||
-    shape === "INVERSION"
-  ) {
-
-    return quality === "MAJOR"
-      ? [...MAJOR_TRIAD]
-      : [...MINOR_TRIAD];
-
+  if (shape === "ROOT" || shape === "INVERSION") {
+    return quality === "MAJOR" ? [...MAJOR_TRIAD] : [...MINOR_TRIAD];
   }
-
 
   /*
    * SEVENTH
    */
 
-  if (
-    shape === "SEVENTH"
-  ) {
-
-    return quality === "MAJOR"
-      ? [...MAJOR_SEVENTH]
-      : [...MINOR_SEVENTH];
-
+  if (shape === "SEVENTH") {
+    return quality === "MAJOR" ? [...MAJOR_SEVENTH] : [...MINOR_SEVENTH];
   }
-
 
   /*
    * DOMINANT / DIMINISHED
    */
 
-  return [
-    ...DOMINANT_SEVENTH,
-  ];
-
+  return [...DOMINANT_SEVENTH];
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -514,45 +374,23 @@ function getChordIntervals(
 |--------------------------------------------------------------------------
 */
 
-function applyInversion(
-  notes: number[]
-): number[] {
-
-  if (
-    notes.length < 2
-  ) {
-
+function applyInversion(notes: number[]): number[] {
+  if (notes.length < 2) {
     return notes;
-
   }
 
+  const result = [...notes];
 
-  const result =
-    [...notes];
+  const first = result.shift();
 
-
-  const first =
-    result.shift();
-
-
-  if (
-    first === undefined
-  ) {
-
+  if (first === undefined) {
     return result;
-
   }
 
-
-  result.push(
-    first + 12
-  );
-
+  result.push(first + 12);
 
   return result;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -560,27 +398,17 @@ function applyInversion(
 |--------------------------------------------------------------------------
 */
 
-export function generateChordMidi(
-  state: ChordState
-): number[] {
-
+export function generateChordMidi(state: ChordState): number[] {
   /*
   |--------------------------------------------------------------------------
   | Clamp chord semitone
   |--------------------------------------------------------------------------
   */
 
-  const chordSemitone =
-    Math.max(
-      -1,
-      Math.min(
-        1,
-        Math.round(
-          state.chordSemitone
-        )
-      )
-    );
-
+  const chordSemitone = Math.max(
+    -1,
+    Math.min(1, Math.round(state.chordSemitone)),
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -588,11 +416,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  const octaveOffset =
-    Math.round(
-      state.octaveOffset
-    );
-
+  const octaveOffset = Math.round(state.octaveOffset);
 
   /*
   |--------------------------------------------------------------------------
@@ -600,11 +424,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  let root =
-    getChordRoot(
-      state.degree
-    );
-
+  let root = getChordRoot(state.degree);
 
   /*
   |--------------------------------------------------------------------------
@@ -612,9 +432,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    chordSemitone;
-
+  root += chordSemitone;
 
   /*
   |--------------------------------------------------------------------------
@@ -622,11 +440,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    Math.round(
-      state.transpose
-    );
-
+  root += Math.round(state.transpose);
 
   /*
   |--------------------------------------------------------------------------
@@ -634,9 +448,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  root +=
-    octaveOffset;
-
+  root += octaveOffset;
 
   /*
   |--------------------------------------------------------------------------
@@ -644,12 +456,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  let intervals =
-    getChordIntervals(
-      state.quality,
-      state.shape
-    );
-
+  let intervals = getChordIntervals(state.quality, state.shape);
 
   /*
   |--------------------------------------------------------------------------
@@ -657,12 +464,7 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  let notes =
-    intervals.map(
-      interval =>
-        root + interval
-    );
-
+  let notes = intervals.map((interval) => root + interval);
 
   /*
   |--------------------------------------------------------------------------
@@ -670,18 +472,9 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  if (
-    state.shape ===
-    "INVERSION"
-  ) {
-
-    notes =
-      applyInversion(
-        notes
-      );
-
+  if (state.shape === "INVERSION") {
+    notes = applyInversion(notes);
   }
-
 
   /*
   |--------------------------------------------------------------------------
@@ -689,16 +482,10 @@ export function generateChordMidi(
   |--------------------------------------------------------------------------
   */
 
-  notes.sort(
-    (a, b) =>
-      a - b
-  );
-
+  notes.sort((a, b) => a - b);
 
   return notes;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -710,22 +497,11 @@ export function generateChordMidi(
 |--------------------------------------------------------------------------
 */
 
-export function generateChordNotes(
-  state: ChordState
-): string[] {
+export function generateChordNotes(state: ChordState): string[] {
+  const midiNotes = generateChordMidi(state);
 
-  const midiNotes =
-    generateChordMidi(
-      state
-    );
-
-
-  return midiNotes.map(
-    midiToNote
-  );
-
+  return midiNotes.map(midiToNote);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -733,11 +509,8 @@ export function generateChordNotes(
 |--------------------------------------------------------------------------
 */
 
-export function createDefaultChordState():
-  ChordState {
-
+export function createDefaultChordState(): ChordState {
   return {
-
     degree: "I",
 
     quality: "MAJOR",
@@ -749,7 +522,5 @@ export function createDefaultChordState():
     transpose: 0,
 
     octaveOffset: 0,
-
   };
-
 }

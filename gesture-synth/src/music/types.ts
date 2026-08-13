@@ -34,9 +34,7 @@ export type ChordQuality =
   | "dominant7"
   | "diminished7";
 
-export type TriadQuality =
-  | "major"
-  | "minor";
+export type TriadQuality = "major" | "minor";
 
 export type Voicing =
   | "root"
@@ -44,20 +42,11 @@ export type Voicing =
   | "majorMinor7"
   | "dominantDiminished7";
 
-export type LeftHandTilt =
-  | "inward"
-  | "outward"
-  | "neutral";
+export type LeftHandTilt = "inward" | "outward" | "neutral";
 
-export type RightHandTilt =
-  | "inward"
-  | "outward"
-  | "neutral";
+export type RightHandTilt = "inward" | "outward" | "neutral";
 
-export type OctaveDirection =
-  | "up"
-  | "down"
-  | "normal";
+export type OctaveDirection = "up" | "down" | "normal";
 
 export interface ScaleState {
   root: RootNote;

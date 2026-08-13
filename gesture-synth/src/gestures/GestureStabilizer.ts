@@ -4,16 +4,9 @@
 |--------------------------------------------------------------------------
 */
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type {
-  FingerState,
-} from "./FingerDetector";
-
+import type { FingerState } from "./FingerDetector";
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +16,6 @@ import type {
 
 const HOLD_TIME_MS = 25;
 const NULL_GRACE_MS = 40;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -39,36 +31,25 @@ interface FingerSnapshot {
   pinky: boolean;
 }
 
-
 /*
 |--------------------------------------------------------------------------
 | CREATE SNAPSHOT
 |--------------------------------------------------------------------------
 */
 
-function createSnapshot(
-  fingers: FingerState
-): FingerSnapshot {
-
+function createSnapshot(fingers: FingerState): FingerSnapshot {
   return {
-    thumb:
-      fingers.thumb.extended,
+    thumb: fingers.thumb.extended,
 
-    index:
-      fingers.index.extended,
+    index: fingers.index.extended,
 
-    middle:
-      fingers.middle.extended,
+    middle: fingers.middle.extended,
 
-    ring:
-      fingers.ring.extended,
+    ring: fingers.ring.extended,
 
-    pinky:
-      fingers.pinky.extended,
+    pinky: fingers.pinky.extended,
   };
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -78,20 +59,13 @@ function createSnapshot(
 
 function sameSnapshot(
   a: FingerSnapshot | null,
-  b: FingerSnapshot | null
+  b: FingerSnapshot | null,
 ): boolean {
-
-  if (
-    a === null &&
-    b === null
-  ) {
+  if (a === null && b === null) {
     return true;
   }
 
-  if (
-    a === null ||
-    b === null
-  ) {
+  if (a === null || b === null) {
     return false;
   }
 
@@ -102,9 +76,7 @@ function sameSnapshot(
     a.ring === b.ring &&
     a.pinky === b.pinky
   );
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -112,10 +84,7 @@ function sameSnapshot(
 |--------------------------------------------------------------------------
 */
 
-function countSnapshot(
-  snapshot: FingerSnapshot
-): number {
-
+function countSnapshot(snapshot: FingerSnapshot): number {
   return (
     Number(snapshot.thumb) +
     Number(snapshot.index) +
@@ -123,9 +92,7 @@ function countSnapshot(
     Number(snapshot.ring) +
     Number(snapshot.pinky)
   );
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -135,9 +102,8 @@ function countSnapshot(
 
 function toFingerState(
   snapshot: FingerSnapshot,
-  landmarks?: FingerState["landmarks"]
+  landmarks?: FingerState["landmarks"],
 ): FingerState {
-
   return {
     thumb: {
       extended: snapshot.thumb,
@@ -164,14 +130,11 @@ function toFingerState(
       confidence: 1,
     },
 
-    count:
-      countSnapshot(snapshot),
+    count: countSnapshot(snapshot),
 
     landmarks,
   } as FingerState;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -180,17 +143,9 @@ function toFingerState(
 */
 
 export function useStableFingers(
-  fingers: FingerState | null
+  fingers: FingerState | null,
 ): FingerState | null {
-
-  const [
-    stableFingers,
-    setStableFingers,
-  ] =
-    useState<FingerState | null>(
-      null
-    );
-
+  const [stableFingers, setStableFingers] = useState<FingerState | null>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -198,28 +153,16 @@ export function useStableFingers(
   |--------------------------------------------------------------------------
   */
 
-  const candidateRef =
-    useRef<FingerSnapshot | null>(
-      null
-    );
+  const candidateRef = useRef<FingerSnapshot | null>(null);
 
-  const candidateSinceRef =
-    useRef(0);
+  const candidateSinceRef = useRef(0);
 
-  const stableRef =
-    useRef<FingerSnapshot | null>(
-      null
-    );
+  const stableRef = useRef<FingerSnapshot | null>(null);
 
-  const lastValidRef =
-    useRef(0);
-
+  const lastValidRef = useRef(0);
 
   useEffect(() => {
-
-    const now =
-      performance.now();
-
+    const now = performance.now();
 
     /*
     |--------------------------------------------------------------------------
@@ -228,35 +171,20 @@ export function useStableFingers(
     */
 
     if (!fingers) {
-
-      if (
-        now -
-          lastValidRef.current <
-        NULL_GRACE_MS
-      ) {
-
+      if (now - lastValidRef.current < NULL_GRACE_MS) {
         return;
-
       }
 
+      candidateRef.current = null;
 
-      candidateRef.current =
-        null;
+      candidateSinceRef.current = 0;
 
-      candidateSinceRef.current =
-        0;
+      stableRef.current = null;
 
-      stableRef.current =
-        null;
-
-      setStableFingers(
-        null
-      );
+      setStableFingers(null);
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -264,15 +192,9 @@ export function useStableFingers(
     |--------------------------------------------------------------------------
     */
 
-    lastValidRef.current =
-      now;
+    lastValidRef.current = now;
 
-
-    const snapshot =
-      createSnapshot(
-        fingers
-      );
-
+    const snapshot = createSnapshot(fingers);
 
     /*
     |--------------------------------------------------------------------------
@@ -280,19 +202,10 @@ export function useStableFingers(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      !sameSnapshot(
-        snapshot,
-        candidateRef.current
-      )
-    ) {
+    if (!sameSnapshot(snapshot, candidateRef.current)) {
+      candidateRef.current = snapshot;
 
-      candidateRef.current =
-        snapshot;
-
-      candidateSinceRef.current =
-        now;
-
+      candidateSinceRef.current = now;
 
       /*
       |--------------------------------------------------------------------------
@@ -300,27 +213,14 @@ export function useStableFingers(
       |--------------------------------------------------------------------------
       */
 
-      if (
-        stableRef.current ===
-        null
-      ) {
+      if (stableRef.current === null) {
+        stableRef.current = snapshot;
 
-        stableRef.current =
-          snapshot;
-
-        setStableFingers(
-          toFingerState(
-            snapshot,
-            fingers.landmarks
-          )
-        );
-
+        setStableFingers(toFingerState(snapshot, fingers.landmarks));
       }
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -328,20 +228,11 @@ export function useStableFingers(
     |--------------------------------------------------------------------------
     */
 
-    const held =
-      now -
-      candidateSinceRef.current;
+    const held = now - candidateSinceRef.current;
 
-
-    if (
-      held <
-      HOLD_TIME_MS
-    ) {
-
+    if (held < HOLD_TIME_MS) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -349,13 +240,7 @@ export function useStableFingers(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      sameSnapshot(
-        snapshot,
-        stableRef.current
-      )
-    ) {
-
+    if (sameSnapshot(snapshot, stableRef.current)) {
       /*
       |--------------------------------------------------------------------------
       | Update landmarks without changing
@@ -363,29 +248,19 @@ export function useStableFingers(
       |--------------------------------------------------------------------------
       */
 
-      setStableFingers(
-        previous => {
-
-          if (!previous) {
-            return toFingerState(
-              snapshot,
-              fingers.landmarks
-            );
-          }
-
-          return {
-            ...previous,
-            landmarks:
-              fingers.landmarks,
-          };
-
+      setStableFingers((previous) => {
+        if (!previous) {
+          return toFingerState(snapshot, fingers.landmarks);
         }
-      );
+
+        return {
+          ...previous,
+          landmarks: fingers.landmarks,
+        };
+      });
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -393,23 +268,10 @@ export function useStableFingers(
     |--------------------------------------------------------------------------
     */
 
-    stableRef.current =
-      snapshot;
+    stableRef.current = snapshot;
 
-
-    setStableFingers(
-      toFingerState(
-        snapshot,
-        fingers.landmarks
-      )
-    );
-
-
-  }, [
-    fingers,
-  ]);
-
+    setStableFingers(toFingerState(snapshot, fingers.landmarks));
+  }, [fingers]);
 
   return stableFingers;
-
 }

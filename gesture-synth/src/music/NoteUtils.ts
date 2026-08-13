@@ -41,21 +41,15 @@ const FLAT_TO_SHARP: Record<string, string> = {
  * Db -> 1
  * Bb -> 10
  */
-export function noteToPitchClass(
-  note: RootNote
-): number {
-  const normalized =
-    FLAT_TO_SHARP[note] ?? note;
+export function noteToPitchClass(note: RootNote): number {
+  const normalized = FLAT_TO_SHARP[note] ?? note;
 
-  const index =
-    CHROMATIC_SHARPS.indexOf(
-      normalized as (typeof CHROMATIC_SHARPS)[number]
-    );
+  const index = CHROMATIC_SHARPS.indexOf(
+    normalized as (typeof CHROMATIC_SHARPS)[number],
+  );
 
   if (index === -1) {
-    throw new Error(
-      `Unknown note: ${note}`
-    );
+    throw new Error(`Unknown note: ${note}`);
   }
 
   return index;
@@ -66,11 +60,8 @@ export function noteToPitchClass(
  *
  * By default we use sharps.
  */
-export function pitchClassToSharp(
-  pitchClass: number
-): string {
-  const normalized =
-    ((pitchClass % 12) + 12) % 12;
+export function pitchClassToSharp(pitchClass: number): string {
+  const normalized = ((pitchClass % 12) + 12) % 12;
 
   return CHROMATIC_SHARPS[normalized];
 }
@@ -78,11 +69,8 @@ export function pitchClassToSharp(
 /**
  * Convert pitch class to a flat-friendly spelling.
  */
-export function pitchClassToFlat(
-  pitchClass: number
-): string {
-  const normalized =
-    ((pitchClass % 12) + 12) % 12;
+export function pitchClassToFlat(pitchClass: number): string {
+  const normalized = ((pitchClass % 12) + 12) % 12;
 
   const flats: Record<number, string> = {
     0: "C",
@@ -107,17 +95,8 @@ export function pitchClassToFlat(
  *
  * This keeps the notation reasonably musical for common flat keys.
  */
-export function shouldUseFlats(
-  root: RootNote
-): boolean {
-  return [
-    "F",
-    "Bb",
-    "Eb",
-    "Ab",
-    "Db",
-    "Gb",
-  ].includes(root);
+export function shouldUseFlats(root: RootNote): boolean {
+  return ["F", "Bb", "Eb", "Ab", "Db", "Gb"].includes(root);
 }
 
 /**
@@ -129,15 +108,10 @@ export function shouldUseFlats(
  * 61 -> C#4
  * 70 -> Bb4 when flat mode is requested
  */
-export function midiToNote(
-  midi: number,
-  preferFlats = false
-): string {
-  const pitchClass =
-    ((midi % 12) + 12) % 12;
+export function midiToNote(midi: number, preferFlats = false): string {
+  const pitchClass = ((midi % 12) + 12) % 12;
 
-  const octave =
-    Math.floor(midi / 12) - 1;
+  const octave = Math.floor(midi / 12) - 1;
 
   const noteName = preferFlats
     ? pitchClassToFlat(pitchClass)
@@ -155,12 +129,8 @@ export function midiToNote(
  * C0  = 12
  * C4  = 60
  */
-export function noteToMidi(
-  note: RootNote,
-  octave: number
-): number {
-  const pitchClass =
-    noteToPitchClass(note);
+export function noteToMidi(note: RootNote, octave: number): number {
+  const pitchClass = noteToPitchClass(note);
 
   return 12 * (octave + 1) + pitchClass;
 }
@@ -174,65 +144,42 @@ export function noteToMidi(
  *
  * into MIDI.
  */
-export function noteStringToMidi(
-  note: string
-): number {
-  const match =
-    note.match(/^([A-G](?:#|b)?)(-?\d+)$/);
+export function noteStringToMidi(note: string): number {
+  const match = note.match(/^([A-G](?:#|b)?)(-?\d+)$/);
 
   if (!match) {
-    throw new Error(
-      `Invalid note: ${note}`
-    );
+    throw new Error(`Invalid note: ${note}`);
   }
 
-  const noteName =
-    match[1] as RootNote;
+  const noteName = match[1] as RootNote;
 
-  const octave =
-    Number(match[2]);
+  const octave = Number(match[2]);
 
-  return noteToMidi(
-    noteName,
-    octave
-  );
+  return noteToMidi(noteName, octave);
 }
 
 /**
  * Convert a note string to a pitch class.
  */
-export function noteStringToPitchClass(
-  note: string
-): number {
-  const match =
-    note.match(/^([A-G](?:#|b)?)(-?\d+)$/);
+export function noteStringToPitchClass(note: string): number {
+  const match = note.match(/^([A-G](?:#|b)?)(-?\d+)$/);
 
   if (!match) {
-    throw new Error(
-      `Invalid note: ${note}`
-    );
+    throw new Error(`Invalid note: ${note}`);
   }
 
-  return noteToPitchClass(
-    match[1] as RootNote
-  );
+  return noteToPitchClass(match[1] as RootNote);
 }
 
 /**
  * Transpose a root note by semitones.
  */
-export function transposeRoot(
-  root: RootNote,
-  semitones: number
-): RootNote {
-  const pitchClass =
-    noteToPitchClass(root);
+export function transposeRoot(root: RootNote, semitones: number): RootNote {
+  const pitchClass = noteToPitchClass(root);
 
-  const newPitchClass =
-    ((pitchClass + semitones) % 12 + 12) % 12;
+  const newPitchClass = (((pitchClass + semitones) % 12) + 12) % 12;
 
-  const useFlats =
-    shouldUseFlats(root);
+  const useFlats = shouldUseFlats(root);
 
   return (
     useFlats
@@ -250,32 +197,23 @@ export function transposeRoot(
 export function getScaleDegreeRoot(
   key: RootNote,
   scaleIntervals: number[],
-  degree: number
+  degree: number,
 ): RootNote {
   if (degree < 1) {
-    throw new Error(
-      "Scale degree must be >= 1"
-    );
+    throw new Error("Scale degree must be >= 1");
   }
 
-  const keyPitch =
-    noteToPitchClass(key);
+  const keyPitch = noteToPitchClass(key);
 
-  const index =
-    (degree - 1) % scaleIntervals.length;
+  const index = (degree - 1) % scaleIntervals.length;
 
-  const interval =
-    scaleIntervals[index];
+  const interval = scaleIntervals[index];
 
-  const pitchClass =
-    (keyPitch + interval) % 12;
+  const pitchClass = (keyPitch + interval) % 12;
 
-  const useFlats =
-    shouldUseFlats(key);
+  const useFlats = shouldUseFlats(key);
 
   return (
-    useFlats
-      ? pitchClassToFlat(pitchClass)
-      : pitchClassToSharp(pitchClass)
+    useFlats ? pitchClassToFlat(pitchClass) : pitchClassToSharp(pitchClass)
   ) as RootNote;
 }

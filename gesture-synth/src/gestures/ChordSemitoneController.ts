@@ -18,20 +18,11 @@
 |--------------------------------------------------------------------------
 */
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import type {
-  FingerState,
-} from "./FingerDetector";
+import type { FingerState } from "./FingerDetector";
 
-import {
-  isChordSemitoneGesture,
-} from "./GestureMapper";
-
+import { isChordSemitoneGesture } from "./GestureMapper";
 
 /*
 |--------------------------------------------------------------------------
@@ -39,16 +30,9 @@ import {
 |--------------------------------------------------------------------------
 */
 
-export type Semitone =
-  | -1
-  | 0
-  | 1;
+export type Semitone = -1 | 0 | 1;
 
-export type SemitoneTilt =
-  | "INWARD"
-  | "NEUTRAL"
-  | "OUTWARD";
-
+export type SemitoneTilt = "INWARD" | "NEUTRAL" | "OUTWARD";
 
 /*
 |--------------------------------------------------------------------------
@@ -60,7 +44,6 @@ const HOLD_TIME_MS = 80;
 
 const SMOOTHING_SAMPLES = 5;
 
-
 /*
 |--------------------------------------------------------------------------
 | ANGLE ZONES
@@ -70,7 +53,6 @@ const SMOOTHING_SAMPLES = 5;
 const OUTWARD_MAX = 60;
 
 const INWARD_MIN = 120;
-
 
 /*
 |--------------------------------------------------------------------------
@@ -86,108 +68,49 @@ const NEUTRAL_TO_INWARD = 125;
 
 const INWARD_TO_NEUTRAL = 115;
 
-
 /*
 |--------------------------------------------------------------------------
 | PALM ANGLE
 |--------------------------------------------------------------------------
 */
 
-function getPalmAngle(
-  fingers: FingerState
-): number | null {
+function getPalmAngle(fingers: FingerState): number | null {
+  const landmarks = fingers.landmarks;
 
-  const landmarks =
-    fingers.landmarks;
-
-
-  if (
-    !landmarks ||
-    landmarks.length < 18
-  ) {
-
+  if (!landmarks || landmarks.length < 18) {
     return null;
-
   }
 
+  const indexMcp = landmarks[5];
 
-  const indexMcp =
-    landmarks[5];
+  const pinkyMcp = landmarks[17];
 
-  const pinkyMcp =
-    landmarks[17];
-
-
-  if (
-    !indexMcp ||
-    !pinkyMcp
-  ) {
-
+  if (!indexMcp || !pinkyMcp) {
     return null;
-
   }
 
+  const dx = pinkyMcp.x - indexMcp.x;
 
-  const dx =
-    pinkyMcp.x -
-    indexMcp.x;
+  const dy = pinkyMcp.y - indexMcp.y;
 
-  const dy =
-    pinkyMcp.y -
-    indexMcp.y;
-
-
-  if (
-    !Number.isFinite(dx) ||
-    !Number.isFinite(dy)
-  ) {
-
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) {
     return null;
-
   }
 
+  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
 
-  let angle =
-    Math.atan2(
-      dy,
-      dx
-    ) *
-    (180 / Math.PI);
+  angle = -angle;
 
-
-  angle =
-    -angle;
-
-
-  if (
-    angle < 0
-  ) {
-
+  if (angle < 0) {
     angle += 360;
-
   }
 
-
-  if (
-    angle > 180
-  ) {
-
-    angle =
-      360 - angle;
-
+  if (angle > 180) {
+    angle = 360 - angle;
   }
 
-
-  return Math.max(
-    0,
-    Math.min(
-      180,
-      angle
-    )
-  );
-
+  return Math.max(0, Math.min(180, angle));
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -195,37 +118,15 @@ function getPalmAngle(
 |--------------------------------------------------------------------------
 */
 
-function getSmoothedAngle(
-  samples: number[]
-): number {
-
-  if (
-    samples.length === 0
-  ) {
-
+function getSmoothedAngle(samples: number[]): number {
+  if (samples.length === 0) {
     return 90;
-
   }
 
+  const total = samples.reduce((sum, value) => sum + value, 0);
 
-  const total =
-    samples.reduce(
-      (
-        sum,
-        value
-      ) =>
-        sum + value,
-      0
-    );
-
-
-  return (
-    total /
-    samples.length
-  );
-
+  return total / samples.length;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -233,32 +134,17 @@ function getSmoothedAngle(
 |--------------------------------------------------------------------------
 */
 
-function getInitialZone(
-  angle: number
-): SemitoneTilt {
-
-  if (
-    angle >= INWARD_MIN
-  ) {
-
+function getInitialZone(angle: number): SemitoneTilt {
+  if (angle >= INWARD_MIN) {
     return "INWARD";
-
   }
 
-
-  if (
-    angle >= OUTWARD_MAX
-  ) {
-
+  if (angle >= OUTWARD_MAX) {
     return "NEUTRAL";
-
   }
-
 
   return "OUTWARD";
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -266,80 +152,37 @@ function getInitialZone(
 |--------------------------------------------------------------------------
 */
 
-function getNextZone(
-  angle: number,
-  current: SemitoneTilt
-): SemitoneTilt {
-
-  if (
-    current === "OUTWARD"
-  ) {
-
-    if (
-      angle >= OUTWARD_TO_NEUTRAL
-    ) {
-
+function getNextZone(angle: number, current: SemitoneTilt): SemitoneTilt {
+  if (current === "OUTWARD") {
+    if (angle >= OUTWARD_TO_NEUTRAL) {
       return "NEUTRAL";
-
     }
-
 
     return "OUTWARD";
-
   }
 
-
-  if (
-    current === "NEUTRAL"
-  ) {
-
-    if (
-      angle <= NEUTRAL_TO_OUTWARD
-    ) {
-
+  if (current === "NEUTRAL") {
+    if (angle <= NEUTRAL_TO_OUTWARD) {
       return "OUTWARD";
-
     }
 
-
-    if (
-      angle >= NEUTRAL_TO_INWARD
-    ) {
-
+    if (angle >= NEUTRAL_TO_INWARD) {
       return "INWARD";
-
     }
-
 
     return "NEUTRAL";
-
   }
 
-
-  if (
-    current === "INWARD"
-  ) {
-
-    if (
-      angle <= INWARD_TO_NEUTRAL
-    ) {
-
+  if (current === "INWARD") {
+    if (angle <= INWARD_TO_NEUTRAL) {
       return "NEUTRAL";
-
     }
 
-
     return "INWARD";
-
   }
 
-
-  return getInitialZone(
-    angle
-  );
-
+  return getInitialZone(angle);
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -347,32 +190,17 @@ function getNextZone(
 |--------------------------------------------------------------------------
 */
 
-function zoneToSemitone(
-  zone: SemitoneTilt
-): Semitone {
-
-  if (
-    zone === "INWARD"
-  ) {
-
+function zoneToSemitone(zone: SemitoneTilt): Semitone {
+  if (zone === "INWARD") {
     return -1;
-
   }
 
-
-  if (
-    zone === "OUTWARD"
-  ) {
-
+  if (zone === "OUTWARD") {
     return 1;
-
   }
-
 
   return 0;
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -380,52 +208,20 @@ function zoneToSemitone(
 |--------------------------------------------------------------------------
 */
 
-export function useChordSemitoneController(
-  fingers: FingerState | null
-) {
+export function useChordSemitoneController(fingers: FingerState | null) {
+  const [chordSemitone, setChordSemitone] = useState<Semitone>(0);
 
-  const [
-    chordSemitone,
-    setChordSemitone,
-  ] =
-    useState<Semitone>(
-      0
-    );
+  const [semitoneTilt, setSemitoneTilt] = useState<SemitoneTilt>("NEUTRAL");
 
+  const angleHistoryRef = useRef<number[]>([]);
 
-  const [
-    semitoneTilt,
-    setSemitoneTilt,
-  ] =
-    useState<SemitoneTilt>(
-      "NEUTRAL"
-    );
+  const candidateZoneRef = useRef<SemitoneTilt | null>(null);
 
+  const candidateSinceRef = useRef<number>(0);
 
-  const angleHistoryRef =
-    useRef<number[]>([]);
-
-
-  const candidateZoneRef =
-    useRef<SemitoneTilt | null>(
-      null
-    );
-
-
-  const candidateSinceRef =
-    useRef<number>(
-      0
-    );
-
-
-  const stableZoneRef =
-    useRef<SemitoneTilt>(
-      "NEUTRAL"
-    );
-
+  const stableZoneRef = useRef<SemitoneTilt>("NEUTRAL");
 
   useEffect(() => {
-
     /*
     |--------------------------------------------------------------------------
     | NO HAND
@@ -435,34 +231,21 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      !fingers
-    ) {
+    if (!fingers) {
+      angleHistoryRef.current = [];
 
-      angleHistoryRef.current =
-        [];
+      candidateZoneRef.current = null;
 
-      candidateZoneRef.current =
-        null;
+      candidateSinceRef.current = 0;
 
-      candidateSinceRef.current =
-        0;
+      stableZoneRef.current = "NEUTRAL";
 
-      stableZoneRef.current =
-        "NEUTRAL";
+      setSemitoneTilt("NEUTRAL");
 
-      setSemitoneTilt(
-        "NEUTRAL"
-      );
-
-      setChordSemitone(
-        0
-      );
+      setChordSemitone(0);
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -470,11 +253,7 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    const gestureActive =
-      isChordSemitoneGesture(
-        fingers
-      );
-
+    const gestureActive = isChordSemitoneGesture(fingers);
 
     /*
     |--------------------------------------------------------------------------
@@ -489,37 +268,21 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      !gestureActive
-    ) {
+    if (!gestureActive) {
+      angleHistoryRef.current = [];
 
-      angleHistoryRef.current =
-        [];
+      candidateZoneRef.current = null;
 
-      candidateZoneRef.current =
-        null;
+      candidateSinceRef.current = 0;
 
-      candidateSinceRef.current =
-        0;
+      stableZoneRef.current = "NEUTRAL";
 
-      stableZoneRef.current =
-        "NEUTRAL";
+      setSemitoneTilt("NEUTRAL");
 
-      setSemitoneTilt(
-        "NEUTRAL"
-      );
-
-      setChordSemitone(
-        previous =>
-          previous === 0
-            ? previous
-            : 0
-      );
+      setChordSemitone((previous) => (previous === 0 ? previous : 0));
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -527,52 +290,23 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    const angle =
-      getPalmAngle(
-        fingers
-      );
+    const angle = getPalmAngle(fingers);
 
-
-    if (
-      angle === null
-    ) {
-
+    if (angle === null) {
       return;
-
     }
 
+    angleHistoryRef.current.push(angle);
 
-    angleHistoryRef.current.push(
-      angle
-    );
-
-
-    if (
-      angleHistoryRef.current.length >
-      SMOOTHING_SAMPLES
-    ) {
-
+    if (angleHistoryRef.current.length > SMOOTHING_SAMPLES) {
       angleHistoryRef.current.shift();
-
     }
 
+    const smoothedAngle = getSmoothedAngle(angleHistoryRef.current);
 
-    const smoothedAngle =
-      getSmoothedAngle(
-        angleHistoryRef.current
-      );
+    const nextZone = getNextZone(smoothedAngle, stableZoneRef.current);
 
-
-    const nextZone =
-      getNextZone(
-        smoothedAngle,
-        stableZoneRef.current
-      );
-
-
-    const now =
-      performance.now();
-
+    const now = performance.now();
 
     /*
     |--------------------------------------------------------------------------
@@ -580,21 +314,13 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      nextZone ===
-      stableZoneRef.current
-    ) {
+    if (nextZone === stableZoneRef.current) {
+      candidateZoneRef.current = null;
 
-      candidateZoneRef.current =
-        null;
-
-      candidateSinceRef.current =
-        0;
+      candidateSinceRef.current = 0;
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -602,21 +328,13 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    if (
-      candidateZoneRef.current !==
-      nextZone
-    ) {
+    if (candidateZoneRef.current !== nextZone) {
+      candidateZoneRef.current = nextZone;
 
-      candidateZoneRef.current =
-        nextZone;
-
-      candidateSinceRef.current =
-        now;
+      candidateSinceRef.current = now;
 
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -624,20 +342,11 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    const heldFor =
-      now -
-      candidateSinceRef.current;
+    const heldFor = now - candidateSinceRef.current;
 
-
-    if (
-      heldFor <
-      HOLD_TIME_MS
-    ) {
-
+    if (heldFor < HOLD_TIME_MS) {
       return;
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -645,35 +354,18 @@ export function useChordSemitoneController(
     |--------------------------------------------------------------------------
     */
 
-    stableZoneRef.current =
-      nextZone;
+    stableZoneRef.current = nextZone;
 
-    candidateZoneRef.current =
-      null;
+    candidateZoneRef.current = null;
 
-    candidateSinceRef.current =
-      0;
+    candidateSinceRef.current = 0;
 
+    const nextSemitone = zoneToSemitone(nextZone);
 
-    const nextSemitone =
-      zoneToSemitone(
-        nextZone
-      );
+    setSemitoneTilt(nextZone);
 
-
-    setSemitoneTilt(
-      nextZone
-    );
-
-
-    setChordSemitone(
-      nextSemitone
-    );
-
-  }, [
-    fingers,
-  ]);
-
+    setChordSemitone(nextSemitone);
+  }, [fingers]);
 
   /*
   |--------------------------------------------------------------------------
@@ -682,14 +374,10 @@ export function useChordSemitoneController(
   */
 
   return {
-
     chordSemitone,
 
     semitoneTilt,
 
-    setChordSemitone:
-      setChordSemitone,
-
+    setChordSemitone: setChordSemitone,
   };
-
 }

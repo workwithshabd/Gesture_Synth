@@ -4,24 +4,13 @@
 |--------------------------------------------------------------------------
 */
 
-import {
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useRef, useState } from "react";
 
-import {
-  HandTracker,
-} from "../gestures/HandTracker";
+import { HandTracker } from "../gestures/HandTracker";
 
-import type {
-  HandTrackingResult,
-} from "../gestures/types";
+import type { HandTrackingResult } from "../gestures/types";
 
-import {
-  HandOverlay,
-} from "./HandOverlay";
-
+import { HandOverlay } from "./HandOverlay";
 
 /*
 |--------------------------------------------------------------------------
@@ -30,15 +19,10 @@ import {
 */
 
 interface CameraViewProps {
+  onResults?: (result: HandTrackingResult) => void;
 
-  onResults?: (
-    result: HandTrackingResult
-  ) => void;
-
-  trackingResult:
-    HandTrackingResult;
+  trackingResult: HandTrackingResult;
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -46,22 +30,14 @@ interface CameraViewProps {
 |--------------------------------------------------------------------------
 */
 
-export function CameraView({
-  onResults,
-  trackingResult,
-}: CameraViewProps) {
-
+export function CameraView({ onResults, trackingResult }: CameraViewProps) {
   /*
   |--------------------------------------------------------------------------
   | VIDEO
   |--------------------------------------------------------------------------
   */
 
-  const videoRef =
-    useRef<HTMLVideoElement | null>(
-      null
-    );
-
+  const videoRef = useRef<HTMLVideoElement | null>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -69,11 +45,7 @@ export function CameraView({
   |--------------------------------------------------------------------------
   */
 
-  const trackerRef =
-    useRef<HandTracker | null>(
-      null
-    );
-
+  const trackerRef = useRef<HandTracker | null>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -86,13 +58,9 @@ export function CameraView({
   |--------------------------------------------------------------------------
   */
 
-  const onResultsRef =
-    useRef<
-      ((
-        result: HandTrackingResult
-      ) => void) | undefined
-    >(onResults);
-
+  const onResultsRef = useRef<
+    ((result: HandTrackingResult) => void) | undefined
+  >(onResults);
 
   /*
   |--------------------------------------------------------------------------
@@ -101,14 +69,8 @@ export function CameraView({
   */
 
   useEffect(() => {
-
-    onResultsRef.current =
-      onResults;
-
-  }, [
-    onResults,
-  ]);
-
+    onResultsRef.current = onResults;
+  }, [onResults]);
 
   /*
   |--------------------------------------------------------------------------
@@ -120,14 +82,9 @@ export function CameraView({
   |--------------------------------------------------------------------------
   */
 
-  const [
-    videoElement,
-    setVideoElement,
-  ] =
-    useState<HTMLVideoElement | null>(
-      null
-    );
-
+  const [videoElement, setVideoElement] = useState<HTMLVideoElement | null>(
+    null,
+  );
 
   /*
   |--------------------------------------------------------------------------
@@ -135,14 +92,7 @@ export function CameraView({
   |--------------------------------------------------------------------------
   */
 
-  const [
-    error,
-    setError,
-  ] =
-    useState<string | null>(
-      null
-    );
-
+  const [error, setError] = useState<string | null>(null);
 
   /*
   |--------------------------------------------------------------------------
@@ -151,20 +101,12 @@ export function CameraView({
   */
 
   useEffect(() => {
+    let mounted = true;
 
-    let mounted =
-      true;
-
-    let stream:
-      | MediaStream
-      | null =
-      null;
-
+    let stream: MediaStream | null = null;
 
     async function initialize() {
-
       try {
-
         /*
         |--------------------------------------------------------------------------
         | RESET ERROR
@@ -173,25 +115,15 @@ export function CameraView({
 
         setError(null);
 
-
         /*
         |--------------------------------------------------------------------------
         | CHECK CAMERA API
         |--------------------------------------------------------------------------
         */
 
-        if (
-          !navigator.mediaDevices ||
-          !navigator.mediaDevices
-            .getUserMedia
-        ) {
-
-          throw new Error(
-            "Camera API is unavailable."
-          );
-
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API is unavailable.");
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -199,30 +131,21 @@ export function CameraView({
         |--------------------------------------------------------------------------
         */
 
-        stream =
-          await navigator.mediaDevices
-            .getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: {
+              ideal: 1280,
+            },
 
-              video: {
+            height: {
+              ideal: 720,
+            },
 
-                width: {
-                  ideal: 1280,
-                },
+            facingMode: "user",
+          },
 
-                height: {
-                  ideal: 720,
-                },
-
-                facingMode:
-                  "user",
-
-              },
-
-              audio:
-                false,
-
-            });
-
+          audio: false,
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -231,18 +154,10 @@ export function CameraView({
         */
 
         if (!mounted) {
-
-          stream
-            .getTracks()
-            .forEach(
-              track =>
-                track.stop()
-            );
+          stream.getTracks().forEach((track) => track.stop());
 
           return;
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -250,18 +165,11 @@ export function CameraView({
         |--------------------------------------------------------------------------
         */
 
-        const video =
-          videoRef.current;
-
+        const video = videoRef.current;
 
         if (!video) {
-
-          throw new Error(
-            "Video element was not created."
-          );
-
+          throw new Error("Video element was not created.");
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -269,9 +177,7 @@ export function CameraView({
         |--------------------------------------------------------------------------
         */
 
-        video.srcObject =
-          stream;
-
+        video.srcObject = stream;
 
         /*
         |--------------------------------------------------------------------------
@@ -281,7 +187,6 @@ export function CameraView({
 
         await video.play();
 
-
         /*
         |--------------------------------------------------------------------------
         | SAVE VIDEO ELEMENT
@@ -289,16 +194,10 @@ export function CameraView({
         */
 
         if (!mounted) {
-
           return;
-
         }
 
-
-        setVideoElement(
-          video
-        );
-
+        setVideoElement(video);
 
         /*
         |--------------------------------------------------------------------------
@@ -306,13 +205,9 @@ export function CameraView({
         |--------------------------------------------------------------------------
         */
 
-        const tracker =
-          new HandTracker();
+        const tracker = new HandTracker();
 
-
-        trackerRef.current =
-          tracker;
-
+        trackerRef.current = tracker;
 
         /*
         |--------------------------------------------------------------------------
@@ -322,7 +217,6 @@ export function CameraView({
 
         await tracker.initialize();
 
-
         /*
         |--------------------------------------------------------------------------
         | CHECK MOUNT
@@ -330,13 +224,10 @@ export function CameraView({
         */
 
         if (!mounted) {
-
           tracker.stop();
 
           return;
-
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -344,59 +235,31 @@ export function CameraView({
         |--------------------------------------------------------------------------
         */
 
-        await tracker.start(
-          video,
-          result => {
+        await tracker.start(video, (result) => {
+          if (!mounted) {
+            return;
+          }
 
-            if (!mounted) {
-
-              return;
-
-            }
-
-
-            /*
+          /*
             |--------------------------------------------------------------------------
             | FORWARD TRACKING RESULT
             |--------------------------------------------------------------------------
             */
 
-            onResultsRef.current?.(
-              result
-            );
-
-          }
-        );
-
+          onResultsRef.current?.(result);
+        });
       } catch (err) {
-
-        console.error(
-          "Gesture Synth camera error:",
-          err
-        );
-
+        console.error("Gesture Synth camera error:", err);
 
         if (!mounted) {
-
           return;
-
         }
 
+        const message = err instanceof Error ? err.message : String(err);
 
-        const message =
-          err instanceof Error
-            ? err.message
-            : String(err);
-
-
-        setError(
-          message
-        );
-
+        setError(message);
       }
-
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -406,7 +269,6 @@ export function CameraView({
 
     initialize();
 
-
     /*
     |--------------------------------------------------------------------------
     | CLEANUP
@@ -414,10 +276,7 @@ export function CameraView({
     */
 
     return () => {
-
-      mounted =
-        false;
-
+      mounted = false;
 
       /*
       |--------------------------------------------------------------------------
@@ -427,9 +286,7 @@ export function CameraView({
 
       trackerRef.current?.stop();
 
-      trackerRef.current =
-        null;
-
+      trackerRef.current = null;
 
       /*
       |--------------------------------------------------------------------------
@@ -437,33 +294,17 @@ export function CameraView({
       |--------------------------------------------------------------------------
       */
 
-      const video =
-        videoRef.current;
-
+      const video = videoRef.current;
 
       if (video) {
+        const currentStream = video.srcObject as MediaStream | null;
 
-        const currentStream =
-          video.srcObject as
-            | MediaStream
-            | null;
-
-
-        currentStream
-          ?.getTracks()
-          .forEach(
-            track =>
-              track.stop()
-          );
-
+        currentStream?.getTracks().forEach((track) => track.stop());
 
         video.pause();
 
-        video.srcObject =
-          null;
-
+        video.srcObject = null;
       }
-
 
       /*
       |--------------------------------------------------------------------------
@@ -471,17 +312,9 @@ export function CameraView({
       |--------------------------------------------------------------------------
       */
 
-      stream
-        ?.getTracks()
-        .forEach(
-          track =>
-            track.stop()
-        );
-
+      stream?.getTracks().forEach((track) => track.stop());
     };
-
   }, []);
-
 
   /*
   |--------------------------------------------------------------------------
@@ -490,143 +323,90 @@ export function CameraView({
   */
 
   return (
-
     <div
       style={{
-        position:
-          "absolute",
+        position: "absolute",
 
-        inset:
-          0,
+        inset: 0,
 
-        width:
-          "100%",
+        width: "100%",
 
-        height:
-          "100%",
+        height: "100%",
 
-        margin:
-          0,
+        margin: 0,
 
-        padding:
-          0,
+        padding: 0,
 
-        overflow:
-          "hidden",
+        overflow: "hidden",
 
-        background:
-          "#000",
+        background: "#000",
       }}
     >
-
       <video
-        ref={
-          videoRef
-        }
-
+        ref={videoRef}
         autoPlay
-
         muted
-
         playsInline
-
         style={{
-          position:
-            "absolute",
+          position: "absolute",
 
-          inset:
-            0,
+          inset: 0,
 
-          width:
-            "100%",
+          width: "100%",
 
-          height:
-            "100%",
+          height: "100%",
 
-          objectFit:
-            "cover",
+          objectFit: "cover",
 
-          objectPosition:
-            "center",
+          objectPosition: "center",
 
-          transform:
-            "scaleX(-1)",
+          transform: "scaleX(-1)",
 
-          display:
-            "block",
+          display: "block",
         }}
       />
 
-
       <HandOverlay
-        video={
-          videoElement
-        }
-
-        leftHand={
-          trackingResult.leftHand
-        }
-
-        rightHand={
-          trackingResult.rightHand
-        }
+        video={videoElement}
+        leftHand={trackingResult.leftHand}
+        rightHand={trackingResult.rightHand}
       />
 
-
       {error && (
-
         <div
           style={{
-            position:
-              "absolute",
+            position: "absolute",
 
-            left:
-              "20px",
+            left: "20px",
 
-            right:
-              "20px",
+            right: "20px",
 
-            bottom:
-              "20px",
+            bottom: "20px",
 
-            zIndex:
-              20,
+            zIndex: 20,
 
-            padding:
-              "12px 16px",
+            padding: "12px 16px",
 
-            borderRadius:
-              "10px",
+            borderRadius: "10px",
 
-            background:
-              "rgba(80,0,0,0.85)",
+            background: "rgba(80,0,0,0.85)",
 
-            color:
-              "#ffaaaa",
+            color: "#ffaaaa",
 
-            fontSize:
-              "13px",
+            fontSize: "13px",
 
-            lineHeight:
-              1.4,
+            lineHeight: 1.4,
 
-            pointerEvents:
-              "none",
+            pointerEvents: "none",
 
-            backdropFilter:
-              "blur(12px)",
+            backdropFilter: "blur(12px)",
 
-            WebkitBackdropFilter:
-              "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
           }}
         >
           {error}
         </div>
-
       )}
-
     </div>
-
   );
-
 }
