@@ -1,18 +1,24 @@
 /*
 |--------------------------------------------------------------------------
-| Rhodes.ts
+| Organ.ts
 |--------------------------------------------------------------------------
 |
-| Tone.js Rhodes-style synthesized instrument.
+| Tone.js synthesized electric organ.
 |
-| Responsibilities:
+| The organ is intentionally built differently from Rhodes.
 |
-|   - Generate Rhodes-style sound
-|   - Play notes
-|   - Release notes
-|   - Change volume
-|   - Change filter
-|   - Dispose all Tone.js resources
+| Rhodes:
+|   - Per-note attack
+|   - Tine / bell character
+|   - Tremolo
+|   - Decaying envelope
+|
+| Organ:
+|   - Multiple continuous harmonics
+|   - Fast attack
+|   - No natural decay
+|   - Sustained tone
+|   - Leslie-style modulation
 |
 |--------------------------------------------------------------------------
 */
@@ -24,16 +30,25 @@ import type {
 } from "./Instrument";
 
 
-export class Rhodes
+export class Organ
   implements Instrument {
 
   /*
   |--------------------------------------------------------------------------
-  | SYNTH
+  | ORGAN VOICES
   |--------------------------------------------------------------------------
   */
 
-  private synth:
+  private fundamental:
+    Tone.PolySynth;
+
+  private fifth:
+    Tone.PolySynth;
+
+  private octave:
+    Tone.PolySynth;
+
+  private upper:
     Tone.PolySynth;
 
 
@@ -49,12 +64,22 @@ export class Rhodes
 
   /*
   |--------------------------------------------------------------------------
-  | TREMOLO
+  | CHORUS
   |--------------------------------------------------------------------------
   */
 
-  private tremolo:
-    Tone.Tremolo;
+  private chorus:
+    Tone.Chorus;
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | VIBRATO
+  |--------------------------------------------------------------------------
+  */
+
+  private vibrato:
+    Tone.Vibrato;
 
 
   /*
@@ -97,41 +122,58 @@ export class Rhodes
           "lowpass",
 
         frequency:
-          5000,
+          5500,
 
         rolloff:
-          -24,
+          -12,
 
         Q:
-          0.7,
+          0.5,
       });
 
 
     /*
     |--------------------------------------------------------------------------
-    | TREMOLO
+    | CHORUS
     |--------------------------------------------------------------------------
     */
 
-    this.tremolo =
-      new Tone.Tremolo({
+    this.chorus =
+      new Tone.Chorus({
         frequency:
-          4.5,
+          0.8,
+
+        delayTime:
+          3.5,
 
         depth:
-          0.15,
+          0.25,
 
         wet:
-          0.2,
+          0.28,
       });
+
+
+    this.chorus.start();
+
 
     /*
     |--------------------------------------------------------------------------
-    | START TREMOLO
+    | VIBRATO
     |--------------------------------------------------------------------------
     */
 
-    this.tremolo.start();
+    this.vibrato =
+      new Tone.Vibrato({
+        frequency:
+          5.5,
+
+        depth:
+          0.025,
+
+        wet:
+          0.15,
+      });
 
 
     /*
@@ -143,44 +185,40 @@ export class Rhodes
     this.reverb =
       new Tone.Reverb({
         decay:
-          2,
+          2.2,
 
         wet:
-          0.2,
+          0.16,
       });
 
 
     /*
     |--------------------------------------------------------------------------
-    | SYNTH
-    |--------------------------------------------------------------------------
-    |
-    | Triangle oscillator gives the Rhodes a warm base.
-    |
+    | FUNDAMENTAL
     |--------------------------------------------------------------------------
     */
 
-    this.synth =
+    this.fundamental =
       new Tone.PolySynth(
         Tone.Synth,
         {
           oscillator: {
             type:
-              "triangle",
+              "sine",
           },
 
           envelope: {
             attack:
-              0.02,
+              0.015,
 
             decay:
-              0.25,
+              0,
 
             sustain:
-              0.55,
+              1,
 
             release:
-              1.2,
+              0.15,
           },
         }
       );
@@ -188,28 +226,169 @@ export class Rhodes
 
     /*
     |--------------------------------------------------------------------------
-    | AUDIO CHAIN
+    | FIFTH
     |--------------------------------------------------------------------------
     |
-    | Synth
-    |   ↓
-    | Filter
-    |   ↓
-    | Tremolo
-    |   ↓
-    | Reverb
-    |   ↓
-    | Destination
+    | Adds the 3rd harmonic / drawbar-style upper component.
     |
     |--------------------------------------------------------------------------
     */
 
-    this.synth
+    this.fifth =
+      new Tone.PolySynth(
+        Tone.Synth,
+        {
+          oscillator: {
+            type:
+              "sine",
+          },
+
+          envelope: {
+            attack:
+              0.015,
+
+            decay:
+              0,
+
+            sustain:
+              1,
+
+            release:
+              0.15,
+          },
+        }
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | OCTAVE
+    |--------------------------------------------------------------------------
+    */
+
+    this.octave =
+      new Tone.PolySynth(
+        Tone.Synth,
+        {
+          oscillator: {
+            type:
+              "sine",
+          },
+
+          envelope: {
+            attack:
+              0.015,
+
+            decay:
+              0,
+
+            sustain:
+              1,
+
+            release:
+              0.15,
+          },
+        }
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPPER HARMONIC
+    |--------------------------------------------------------------------------
+    */
+
+    this.upper =
+      new Tone.PolySynth(
+        Tone.Synth,
+        {
+          oscillator: {
+            type:
+              "sine",
+          },
+
+          envelope: {
+            attack:
+              0.01,
+
+            decay:
+              0,
+
+            sustain:
+              1,
+
+            release:
+              0.15,
+          },
+        }
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | MIX LEVELS
+    |--------------------------------------------------------------------------
+    */
+
+    this.fundamental.volume.value =
+      -4;
+
+    this.fifth.volume.value =
+      -13;
+
+    this.octave.volume.value =
+      -10;
+
+    this.upper.volume.value =
+      -18;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | AUDIO ROUTING
+    |--------------------------------------------------------------------------
+    |
+    | All drawbar voices
+    |          ↓
+    |       Filter
+    |          ↓
+    |       Chorus
+    |          ↓
+    |       Vibrato
+    |          ↓
+    |       Reverb
+    |          ↓
+    |     Destination
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    this.fundamental
       .connect(
         this.filter
+      );
+
+    this.fifth
+      .connect(
+        this.filter
+      );
+
+    this.octave
+      .connect(
+        this.filter
+      );
+
+    this.upper
+      .connect(
+        this.filter
+      );
+
+    this.filter
+      .connect(
+        this.chorus
       )
       .connect(
-        this.tremolo
+        this.vibrato
       )
       .connect(
         this.reverb
@@ -223,21 +402,11 @@ export class Rhodes
   |--------------------------------------------------------------------------
   | PLAY
   |--------------------------------------------------------------------------
-  |
-  | Differential chord update.
-  |
-  |--------------------------------------------------------------------------
   */
 
   play(
     notes: string[]
   ): void {
-
-    /*
-    |--------------------------------------------------------------------------
-    | EMPTY CHORD
-    |--------------------------------------------------------------------------
-    */
 
     if (
       notes.length === 0
@@ -250,7 +419,7 @@ export class Rhodes
 
     /*
     |--------------------------------------------------------------------------
-    | NORMALIZE NOTES
+    | NORMALIZE
     |--------------------------------------------------------------------------
     */
 
@@ -274,7 +443,7 @@ export class Rhodes
 
     /*
     |--------------------------------------------------------------------------
-    | RELEASE REMOVED NOTES
+    | NOTES TO RELEASE
     |--------------------------------------------------------------------------
     */
 
@@ -289,7 +458,7 @@ export class Rhodes
 
     /*
     |--------------------------------------------------------------------------
-    | ATTACK NEW NOTES
+    | NOTES TO ATTACK
     |--------------------------------------------------------------------------
     */
 
@@ -328,7 +497,7 @@ export class Rhodes
       notesToRelease.length > 0
     ) {
 
-      this.synth.triggerRelease(
+      this.releaseNotes(
         notesToRelease
       );
 
@@ -345,7 +514,7 @@ export class Rhodes
       notesToAttack.length > 0
     ) {
 
-      this.synth.triggerAttack(
+      this.attackNotes(
         notesToAttack
       );
 
@@ -360,6 +529,144 @@ export class Rhodes
 
     this.activeNotes =
       nextNotes;
+
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | ATTACK NOTES
+  |--------------------------------------------------------------------------
+  */
+
+  private attackNotes(
+    notes: string[]
+  ): void {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fundamental
+    |--------------------------------------------------------------------------
+    */
+
+    this.fundamental
+      .triggerAttack(
+        notes
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Fifth / 3rd harmonic
+    |--------------------------------------------------------------------------
+    */
+
+    this.fifth
+      .triggerAttack(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(7)
+              .toNote()
+        )
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Octave
+    |--------------------------------------------------------------------------
+    */
+
+    this.octave
+      .triggerAttack(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(12)
+              .toNote()
+        )
+      );
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Upper harmonic
+    |--------------------------------------------------------------------------
+    */
+
+    this.upper
+      .triggerAttack(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(19)
+              .toNote()
+        )
+      );
+
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | RELEASE NOTES
+  |--------------------------------------------------------------------------
+  */
+
+  private releaseNotes(
+    notes: string[]
+  ): void {
+
+    this.fundamental
+      .triggerRelease(
+        notes
+      );
+
+
+    this.fifth
+      .triggerRelease(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(7)
+              .toNote()
+        )
+      );
+
+
+    this.octave
+      .triggerRelease(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(12)
+              .toNote()
+        )
+      );
+
+
+    this.upper
+      .triggerRelease(
+        notes.map(
+          note =>
+            Tone.Frequency(
+              note
+            )
+              .transpose(19)
+              .toNote()
+        )
+      );
 
   }
 
@@ -381,7 +688,7 @@ export class Rhodes
     }
 
 
-    this.synth.triggerRelease(
+    this.releaseNotes(
       this.activeNotes
     );
 
@@ -412,10 +719,29 @@ export class Rhodes
       );
 
 
-    this.synth.volume.rampTo(
+    const db =
       Tone.gainToDb(
         safeValue
-      ),
+      );
+
+
+    this.fundamental.volume.rampTo(
+      db - 4,
+      0.05
+    );
+
+    this.fifth.volume.rampTo(
+      db - 13,
+      0.05
+    );
+
+    this.octave.volume.rampTo(
+      db - 10,
+      0.05
+    );
+
+    this.upper.volume.rampTo(
+      db - 18,
       0.05
     );
 
@@ -434,7 +760,7 @@ export class Rhodes
 
     const safeFrequency =
       Math.max(
-        100,
+        200,
         Math.min(
           20000,
           frequency
@@ -454,50 +780,48 @@ export class Rhodes
   |--------------------------------------------------------------------------
   | DISPOSE
   |--------------------------------------------------------------------------
-  |
-  | Required by Instrument.ts.
-  |
-  | This is important when switching:
-  |
-  |   Rhodes → Piano
-  |
-  | Without disposing these nodes, the old Rhodes can remain connected
-  | to the audio graph and cause memory/audio leaks.
-  |
-  |--------------------------------------------------------------------------
   */
 
   dispose(): void {
-
-    /*
-    |--------------------------------------------------------------------------
-    | Stop active notes
-    |--------------------------------------------------------------------------
-    */
 
     this.stop();
 
 
     /*
     |--------------------------------------------------------------------------
-    | Stop tremolo LFO
+    | Stop modulation
     |--------------------------------------------------------------------------
     */
 
-    this.tremolo.stop();
+    this.chorus.stop();
 
 
     /*
     |--------------------------------------------------------------------------
-    | Dispose Tone.js nodes
+    | Dispose synths
     |--------------------------------------------------------------------------
     */
 
-    this.synth.dispose();
+    this.fundamental.dispose();
+
+    this.fifth.dispose();
+
+    this.octave.dispose();
+
+    this.upper.dispose();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Dispose effects
+    |--------------------------------------------------------------------------
+    */
 
     this.filter.dispose();
 
-    this.tremolo.dispose();
+    this.chorus.dispose();
+
+    this.vibrato.dispose();
 
     this.reverb.dispose();
 

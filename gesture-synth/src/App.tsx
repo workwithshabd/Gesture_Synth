@@ -23,6 +23,15 @@
 |   OFF → C
 |   ON  → D#
 |
+| INSTRUMENT BEHAVIOUR
+|
+|   Instrument selector:
+|       chooses the active instrument
+|
+|   Supported:
+|       ORGAN
+|       RHODES
+|
 |--------------------------------------------------------------------------
 */
 
@@ -69,6 +78,10 @@ import {
 
 import {
   AudioEngine,
+} from "./audio/AudioEngine";
+
+import type {
+  InstrumentType,
 } from "./audio/AudioEngine";
 
 /*
@@ -406,6 +419,20 @@ function App() {
 
   /*
   |--------------------------------------------------------------------------
+  | INSTRUMENT
+  |--------------------------------------------------------------------------
+  */
+
+  const [
+    selectedInstrument,
+    setSelectedInstrument,
+  ] =
+    useState<InstrumentType>(
+      "ORGAN"
+    );
+
+  /*
+  |--------------------------------------------------------------------------
   | TRANSPOSE AMOUNT
   |--------------------------------------------------------------------------
   */
@@ -493,6 +520,12 @@ function App() {
   /*
   |--------------------------------------------------------------------------
   | KEY SELECTOR CHANGE
+  |--------------------------------------------------------------------------
+  |
+  | IMPORTANT:
+  |
+  | This is intentionally unchanged from the original implementation.
+  |
   |--------------------------------------------------------------------------
   */
 
@@ -616,15 +649,14 @@ function App() {
           await audioRef.current
             ?.start();
 
-          /*
-          |--------------------------------------------------------------------------
-          | START AT DEFAULT 30%
-          |--------------------------------------------------------------------------
-          */
-
           audioRef.current
             ?.setVolume(
               DEFAULT_VOLUME
+            );
+
+          audioRef.current
+            ?.setInstrument(
+              selectedInstrument
             );
 
           setAudioStarted(
@@ -645,8 +677,100 @@ function App() {
       },
       [
         audioStarted,
+        selectedInstrument,
       ]
     );
+
+  /*
+  |--------------------------------------------------------------------------
+  | PREVIOUS NOTES
+  |--------------------------------------------------------------------------
+  */
+
+  const previousNotesRef =
+    useRef<string>("");
+
+  /*
+  |--------------------------------------------------------------------------
+  | PREVIOUS INSTRUMENT
+  |--------------------------------------------------------------------------
+  */
+
+  const previousInstrumentRef =
+    useRef<InstrumentType>(
+      selectedInstrument
+    );
+
+  /*
+  |--------------------------------------------------------------------------
+  | INSTRUMENT SWITCH
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+
+    if (
+      !audioStarted
+    ) {
+
+      return;
+
+    }
+
+    const audio =
+      audioRef.current;
+
+    if (
+      !audio
+    ) {
+
+      return;
+
+    }
+
+    if (
+      previousInstrumentRef.current ===
+      selectedInstrument
+    ) {
+
+      return;
+
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | STOP CURRENT INSTRUMENT
+    |--------------------------------------------------------------------------
+    */
+
+    audio.stop();
+
+    /*
+    |--------------------------------------------------------------------------
+    | SWITCH INSTRUMENT
+    |--------------------------------------------------------------------------
+    */
+
+    audio.setInstrument(
+      selectedInstrument
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORCE CURRENT CHORD TO REPLAY
+    |--------------------------------------------------------------------------
+    */
+
+    previousNotesRef.current =
+      "";
+
+    previousInstrumentRef.current =
+      selectedInstrument;
+
+  }, [
+    selectedInstrument,
+    audioStarted,
+  ]);
 
   /*
   |--------------------------------------------------------------------------
@@ -998,14 +1122,6 @@ function App() {
   |--------------------------------------------------------------------------
   | VOLUME
   |--------------------------------------------------------------------------
-  |
-  | No right hand:
-  |   30%
-  |
-  | Right hand detected:
-  |   Volume follows wrist height.
-  |
-  |--------------------------------------------------------------------------
   */
 
   const volume =
@@ -1173,15 +1289,6 @@ function App() {
       effectiveTranspose,
       safeChordSemitone,
     ]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | PREVIOUS NOTES
-  |--------------------------------------------------------------------------
-  */
-
-  const previousNotesRef =
-    useRef<string>("");
 
   /*
   |--------------------------------------------------------------------------
@@ -1524,6 +1631,27 @@ function App() {
           ]}
           onChange={
             setSelectedScale
+          }
+        />
+
+        {/* ======================================================== */}
+        {/* INSTRUMENT */}
+        {/* ======================================================== */}
+
+        <InstrumentSelect
+          label="INSTRUMENT"
+          value={
+            selectedInstrument
+          }
+          options={[
+            "ORGAN",
+            "RHODES",
+          ]}
+          onChange={
+            value =>
+              setSelectedInstrument(
+                value as InstrumentType
+              )
           }
         />
 
@@ -2773,6 +2901,24 @@ function Guide({
         />
 
         <GuideSection
+          title="Instrument"
+          rows={[
+            [
+              "Organ",
+              "Synthesized drawbar organ",
+            ],
+            [
+              "Rhodes",
+              "Electric piano",
+            ],
+            [
+              "Instrument menu",
+              "Switch sound",
+            ],
+          ]}
+        />
+
+        <GuideSection
           title="Other controls"
           rows={[
             [
@@ -2913,20 +3059,10 @@ function GuideSection({
 
   );
 }
+
 /*
 |--------------------------------------------------------------------------
 | WAVEFORM
-|--------------------------------------------------------------------------
-|
-| TWO COUPLED CURRENT WAVES
-|
-|   Violet  → leading stream
-|   Red     → following stream
-|
-| The two waves share the same current field and continuously interact.
-| They converge at the edges, separate through the center, and move
-| together as one flowing energy/current.
-|
 |--------------------------------------------------------------------------
 */
 
@@ -2943,12 +3079,6 @@ function Waveform({
     setPhase,
   ] =
     useState(0);
-
-  /*
-  |--------------------------------------------------------------------------
-  | ANIMATION
-  |--------------------------------------------------------------------------
-  */
 
   useEffect(() => {
 
@@ -3006,20 +3136,8 @@ function Waveform({
     active,
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CONSTANTS
-  |--------------------------------------------------------------------------
-  */
-
   const pointCount =
     360;
-
-  /*
-  |--------------------------------------------------------------------------
-  | POINT ARRAYS
-  |--------------------------------------------------------------------------
-  */
 
   const violetPoints:
     string[] = [];
@@ -3027,23 +3145,11 @@ function Waveform({
   const redPoints:
     string[] = [];
 
-  /*
-  |--------------------------------------------------------------------------
-  | GENERATE COUPLED CURRENT
-  |--------------------------------------------------------------------------
-  */
-
   for (
     let index = 0;
     index < pointCount;
     index++
   ) {
-
-    /*
-    |--------------------------------------------------------------------------
-    | X
-    |--------------------------------------------------------------------------
-    */
 
     const x =
       (
@@ -3052,28 +3158,9 @@ function Waveform({
       ) *
       100;
 
-    /*
-    |--------------------------------------------------------------------------
-    | NORMALIZED POSITION
-    |--------------------------------------------------------------------------
-    */
-
     const t =
       index /
       (pointCount - 1);
-
-    /*
-    |--------------------------------------------------------------------------
-    | EDGE FADE
-    |--------------------------------------------------------------------------
-    |
-    | 0 at the edges
-    | 1 at the center
-    |
-    | This is now actually used to control the interaction.
-    |
-    |--------------------------------------------------------------------------
-    */
 
     const edgeFade =
       Math.sin(
@@ -3081,27 +3168,9 @@ function Waveform({
         t
       );
 
-    /*
-    |--------------------------------------------------------------------------
-    | SMOOTH EDGE CURVE
-    |--------------------------------------------------------------------------
-    |
-    | Makes the transition toward the edges softer instead of linear.
-    |--------------------------------------------------------------------------
-    */
-
     const edgeCurve =
       edgeFade *
       edgeFade;
-
-    /*
-    |--------------------------------------------------------------------------
-    | SHARED LARGE CURRENT
-    |--------------------------------------------------------------------------
-    |
-    | Both waves receive exactly the same large-scale movement.
-    |--------------------------------------------------------------------------
-    */
 
     const current =
       Math.sin(
@@ -3126,15 +3195,6 @@ function Waveform({
         0.42
       );
 
-    /*
-    |--------------------------------------------------------------------------
-    | INTERACTION FIELD
-    |--------------------------------------------------------------------------
-    |
-    | Controls how strongly the two streams attract / separate.
-    |--------------------------------------------------------------------------
-    */
-
     const interaction =
       Math.sin(
         index *
@@ -3143,12 +3203,6 @@ function Waveform({
         0.82
       );
 
-    /*
-    |--------------------------------------------------------------------------
-    | SMALL TURBULENCE
-    |--------------------------------------------------------------------------
-    */
-
     const turbulence =
       Math.sin(
         index *
@@ -3156,12 +3210,6 @@ function Waveform({
         phase *
         1.15
       );
-
-    /*
-    |--------------------------------------------------------------------------
-    | SHARED VERTICAL FLOW
-    |--------------------------------------------------------------------------
-    */
 
     const sharedFlow =
       current *
@@ -3172,18 +3220,6 @@ function Waveform({
 
       current3 *
       3;
-
-    /*
-    |--------------------------------------------------------------------------
-    | VARIABLE SEPARATION
-    |--------------------------------------------------------------------------
-    |
-    | The waves are no longer separated by a fixed amount.
-    |
-    | edgeCurve controls the strength of the separation, causing both
-    | streams to naturally converge into one current near the edges.
-    |--------------------------------------------------------------------------
-    */
 
     const baseSeparation =
       12 +
@@ -3196,15 +3232,6 @@ function Waveform({
       baseSeparation *
       edgeCurve;
 
-    /*
-    |--------------------------------------------------------------------------
-    | LOCAL RIPPLE
-    |--------------------------------------------------------------------------
-    |
-    | Also controlled by edgeFade so the ends remain smooth.
-    |--------------------------------------------------------------------------
-    */
-
     const ripple =
       Math.sin(
         index *
@@ -3215,25 +3242,9 @@ function Waveform({
       2.4 *
       edgeFade;
 
-    /*
-    |--------------------------------------------------------------------------
-    | CURRENT CENTER
-    |--------------------------------------------------------------------------
-    */
-
     const center =
       55 +
       sharedFlow;
-
-    /*
-    |--------------------------------------------------------------------------
-    | INTERACTION OFFSET
-    |--------------------------------------------------------------------------
-    |
-    | This makes the streams lean toward one another rather than simply
-    | moving vertically in parallel.
-    |--------------------------------------------------------------------------
-    */
 
     const violetInteraction =
       interaction *
@@ -3245,43 +3256,19 @@ function Waveform({
       -3.5 *
       edgeCurve;
 
-    /*
-    |--------------------------------------------------------------------------
-    | VIOLET STREAM
-    |--------------------------------------------------------------------------
-    */
-
     const violetY =
       center -
-
       separation /
       2 +
-
       ripple +
-
       violetInteraction;
-
-    /*
-    |--------------------------------------------------------------------------
-    | RED STREAM
-    |--------------------------------------------------------------------------
-    */
 
     const redY =
       center +
-
       separation /
       2 -
-
       ripple +
-
       redInteraction;
-
-    /*
-    |--------------------------------------------------------------------------
-    | ADD POINTS
-    |--------------------------------------------------------------------------
-    */
 
     violetPoints.push(
       `${x},${violetY}`
@@ -3293,23 +3280,11 @@ function Waveform({
 
   }
 
-  /*
-  |--------------------------------------------------------------------------
-  | PATHS
-  |--------------------------------------------------------------------------
-  */
-
   const violetPath =
     violetPoints.join(" ");
 
   const redPath =
     redPoints.join(" ");
-
-  /*
-  |--------------------------------------------------------------------------
-  | RENDER
-  |--------------------------------------------------------------------------
-  */
 
   return (
 
@@ -3332,10 +3307,6 @@ function Waveform({
     >
 
       <defs>
-
-        {/* ======================================================== */}
-        {/* VIOLET GRADIENT */}
-        {/* ======================================================== */}
 
         <linearGradient
           id="coupledVioletGradient"
@@ -3389,10 +3360,6 @@ function Waveform({
 
         </linearGradient>
 
-        {/* ======================================================== */}
-        {/* RED GRADIENT */}
-        {/* ======================================================== */}
-
         <linearGradient
           id="coupledRedGradient"
           x1="0"
@@ -3445,10 +3412,6 @@ function Waveform({
 
         </linearGradient>
 
-        {/* ======================================================== */}
-        {/* CURRENT GRADIENT */}
-        {/* ======================================================== */}
-
         <linearGradient
           id="coupledCurrentGradient"
           x1="0"
@@ -3495,10 +3458,6 @@ function Waveform({
 
         </linearGradient>
 
-        {/* ======================================================== */}
-        {/* VIOLET GLOW */}
-        {/* ======================================================== */}
-
         <filter
           id="coupledVioletGlow"
           x="-30%"
@@ -3525,10 +3484,6 @@ function Waveform({
           </feMerge>
 
         </filter>
-
-        {/* ======================================================== */}
-        {/* RED GLOW */}
-        {/* ======================================================== */}
 
         <filter
           id="coupledRedGlow"
@@ -3557,10 +3512,6 @@ function Waveform({
 
         </filter>
 
-        {/* ======================================================== */}
-        {/* CURRENT GLOW */}
-        {/* ======================================================== */}
-
         <filter
           id="coupledCurrentGlow"
           x="-30%"
@@ -3576,10 +3527,6 @@ function Waveform({
         </filter>
 
       </defs>
-
-      {/* ========================================================== */}
-      {/* BROAD SHARED CURRENT */}
-      {/* ========================================================== */}
 
       <polyline
         points={
@@ -3599,10 +3546,6 @@ function Waveform({
         vectorEffect="non-scaling-stroke"
       />
 
-      {/* ========================================================== */}
-      {/* VIOLET OUTER GLOW */}
-      {/* ========================================================== */}
-
       <polyline
         points={
           violetPath
@@ -3621,10 +3564,6 @@ function Waveform({
         vectorEffect="non-scaling-stroke"
       />
 
-      {/* ========================================================== */}
-      {/* RED OUTER GLOW */}
-      {/* ========================================================== */}
-
       <polyline
         points={
           redPath
@@ -3642,10 +3581,6 @@ function Waveform({
         filter="url(#coupledRedGlow)"
         vectorEffect="non-scaling-stroke"
       />
-
-      {/* ========================================================== */}
-      {/* VIOLET MAIN BODY */}
-      {/* ========================================================== */}
 
       <polyline
         points={
@@ -3669,10 +3604,6 @@ function Waveform({
         vectorEffect="non-scaling-stroke"
       />
 
-      {/* ========================================================== */}
-      {/* RED MAIN BODY */}
-      {/* ========================================================== */}
-
       <polyline
         points={
           redPath
@@ -3695,10 +3626,6 @@ function Waveform({
         vectorEffect="non-scaling-stroke"
       />
 
-      {/* ========================================================== */}
-      {/* VIOLET HOT CORE */}
-      {/* ========================================================== */}
-
       <polyline
         points={
           violetPath
@@ -3719,10 +3646,6 @@ function Waveform({
         }
         vectorEffect="non-scaling-stroke"
       />
-
-      {/* ========================================================== */}
-      {/* RED HOT CORE */}
-      {/* ========================================================== */}
 
       <polyline
         points={
