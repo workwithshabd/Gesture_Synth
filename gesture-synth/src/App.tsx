@@ -867,43 +867,156 @@ function App() {
     octaveOffset,
   ]);
 
- /*
+  /*
+/*
 |--------------------------------------------------------------------------
 | EXACT CHORD NAME
 |--------------------------------------------------------------------------
+|
+| The audio already uses rightGesture.shape.
+|
+| The display must use the same shape so the UI reflects the
+| chord that is actually being played.
+|
+|--------------------------------------------------------------------------
 */
 
-const chordName = useMemo(() => {
-  if (!leftGesture) {
-    return "—";
-  }
+  const chordName = useMemo(() => {
+    if (!leftGesture) {
+      return "—";
+    }
 
-  const keyOffset = KEY_OFFSETS[selectedKey];
+    /*
+    |--------------------------------------------------------------------------
+    | KEY
+    |--------------------------------------------------------------------------
+    */
 
-  const scale = SCALE_INTERVALS[selectedScale];
+    const keyOffset = KEY_OFFSETS[selectedKey];
 
-  const degreeIndex = SCALE_DEGREE_INDEX[leftGesture.degree];
+    if (keyOffset === undefined) {
+      return "—";
+    }
 
-  const degreeOffset =
-    degreeIndex === undefined ? undefined : scale?.[degreeIndex];
+    /*
+    |--------------------------------------------------------------------------
+    | SCALE
+    |--------------------------------------------------------------------------
+    */
 
-  if (keyOffset === undefined || degreeOffset === undefined) {
-    return "—";
-  }
+    const scale = SCALE_INTERVALS[selectedScale];
 
-  const midi =
-    60 + keyOffset + degreeOffset + effectiveTranspose + safeChordSemitone;
+    if (!scale) {
+      return "—";
+    }
 
-  const note = midiToNoteName(midi);
+    /*
+    |--------------------------------------------------------------------------
+    | DEGREE
+    |--------------------------------------------------------------------------
+    */
 
-  return leftGesture.quality === "MINOR" ? `${note} minor` : `${note} major`;
-}, [
-  selectedKey,
-  selectedScale,
-  leftGesture,
-  effectiveTranspose,
-  safeChordSemitone,
-]);
+    const degreeIndex = SCALE_DEGREE_INDEX[leftGesture.degree];
+
+    if (degreeIndex === undefined) {
+      return "—";
+    }
+
+    const degreeOffset = scale[degreeIndex];
+
+    if (degreeOffset === undefined) {
+      return "—";
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ROOT MIDI
+    |--------------------------------------------------------------------------
+    */
+
+    const midi =
+      60 + keyOffset + degreeOffset + effectiveTranspose + safeChordSemitone;
+
+    const note = midiToNoteName(midi);
+
+    /*
+    |--------------------------------------------------------------------------
+    | QUALITY
+    |--------------------------------------------------------------------------
+    */
+
+    const isMinor = leftGesture.quality === "MINOR";
+
+    /*
+    |--------------------------------------------------------------------------
+    | RIGHT-HAND CHORD SHAPE
+    |--------------------------------------------------------------------------
+    */
+
+    const shape = rightGesture?.shape ?? "ROOT";
+
+    /*
+    |--------------------------------------------------------------------------
+    | DISPLAY
+    |--------------------------------------------------------------------------
+    */
+
+    switch (shape) {
+      /*
+      |--------------------------------------------------------------------------
+      | ROOT TRIAD
+      |--------------------------------------------------------------------------
+      */
+
+      case "ROOT":
+        return isMinor ? `${note} minor` : `${note} major`;
+
+      /*
+      |--------------------------------------------------------------------------
+      | INVERSION
+      |--------------------------------------------------------------------------
+      */
+
+      case "INVERSION":
+        return isMinor
+          ? `${note} minor · inversion`
+          : `${note} major · inversion`;
+
+      /*
+      |--------------------------------------------------------------------------
+      | SEVENTH
+      |--------------------------------------------------------------------------
+      */
+
+      case "SEVENTH":
+        return isMinor ? `${note} minor 7` : `${note} major 7`;
+
+      /*
+      |--------------------------------------------------------------------------
+      | DOMINANT / DIMINISHED
+      |--------------------------------------------------------------------------
+      */
+
+      case "DOMINANT_DIMINISHED":
+        return isMinor ? `${note} diminished 7` : `${note} dominant 7`;
+
+      /*
+      |--------------------------------------------------------------------------
+      | FALLBACK
+      |--------------------------------------------------------------------------
+      */
+
+      default:
+        return isMinor ? `${note} minor` : `${note} major`;
+    }
+  }, [
+    selectedKey,
+    selectedScale,
+    leftGesture,
+    rightGesture,
+    effectiveTranspose,
+    safeChordSemitone,
+  ]);
   /*
   |--------------------------------------------------------------------------
   | AUDIO → CHORD
@@ -1192,8 +1305,8 @@ const chordName = useMemo(() => {
 
       const recorder = mimeType
         ? new MediaRecorder(finalStream, {
-            mimeType,
-          })
+          mimeType,
+        })
         : new MediaRecorder(finalStream);
 
       /*
